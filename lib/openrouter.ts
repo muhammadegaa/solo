@@ -43,7 +43,21 @@ export async function chat(messages: Msg[]): Promise<string> {
   return text.trim();
 }
 
+// ElevenLabs v4 when its key is set (https://elevenlabs.io/docs/api-reference/text-to-speech/convert); otherwise OpenRouter.
+async function speakElevenLabs(text: string, apiKey: string): Promise<Buffer> {
+  const voice = process.env.ELEVENLABS_VOICE_ID;
+  if (!voice) throw new Error("Missing ELEVENLABS_VOICE_ID in .env.local");
+  const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}?output_format=mp3_44100_128`, {
+    method: "POST",
+    headers: { "xi-api-key": apiKey, "Content-Type": "application/json" },
+    body: JSON.stringify({ text, model_id: process.env.ELEVENLABS_MODEL ?? "eleven_v4_turbo" }),
+  });
+  if (!res.ok) throw new Error(`ElevenLabs failed (${res.status}): ${await res.text()}`);
+  return Buffer.from(await res.arrayBuffer());
+}
+
 export async function speak(text: string): Promise<Buffer> {
+  if (process.env.ELEVENLABS_API_KEY) return speakElevenLabs(text, process.env.ELEVENLABS_API_KEY);
   const res = await post("/audio/speech", {
     model: process.env.OPENROUTER_TTS_MODEL ?? "openai/gpt-4o-mini-tts-2025-12-15",
     input: text,
