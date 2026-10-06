@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Night } from "@/lib/context";
+import type { PlanItem } from "@/lib/calls";
 import type { Msg } from "@/lib/openrouter";
 
 type Phase = "idle" | "thinking" | "speaking" | "listening" | "paused" | "ended" | "error";
@@ -85,6 +86,9 @@ export default function Call({ nights, usualH, summary }: { nights: Night[]; usu
   const [turns, setTurns] = useState<Turn[]>([]);
   const [cards, setCards] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<{ plan: PlanItem[]; stress: number | null; error?: string } | null>(null);
+  const startedAt = useRef(0);
+  const turnsLog = useRef<Turn[]>([]);
   const [seconds, setSeconds] = useState(0);
 
   const ctx = useRef<AudioContext | null>(null);
@@ -117,6 +121,7 @@ export default function Call({ nights, usualH, summary }: { nights: Night[]; usu
     if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
     if (body.userText) history.current.push({ role: "user", content: body.userText });
     history.current.push({ role: "assistant", content: body.reply });
+    turnsLog.current.push(body.ms);
     setTurns((t) => [...t, body.ms]);
     setCaption({ you: body.userText, ai: body.reply });
     await play(body.audio);
@@ -160,6 +165,9 @@ export default function Call({ nights, usualH, summary }: { nights: Night[]; usu
     try {
       ended.current = false;
       history.current = [];
+      turnsLog.current = [];
+      startedAt.current = Date.now();
+      setResult(null);
       setTurns([]);
       setSeconds(0);
       ctx.current = new AudioContext();
@@ -180,6 +188,14 @@ export default function Call({ nights, usualH, summary }: { nights: Night[]; usu
     stream.current?.getTracks().forEach((t) => t.stop());
     ctx.current?.close();
     setPhase("ended");
+    fetch("/api/call/end", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ startedAt: startedAt.current, durationS: Math.round((Date.now() - startedAt.current) / 1000), messages: history.current, turnsMs: turnsLog.current }),
+    })
+      .then((r) => r.json())
+      .then((b) => setResult(b.error ? { plan: [], stress: null, error: b.error } : b))
+      .catch(() => setResult({ plan: [], stress: null, error: "Could not save this call." }));
   }
 
   const mmss = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
@@ -200,13 +216,27 @@ export default function Call({ nights, usualH, summary }: { nights: Night[]; usu
 
   if (phase === "ended") {
     return (
-      <main className="fl fl-start">
-        <h1>Call ended · {mmss}</h1>
-        <div className="fl-log">
-          {history.current.map((m, i) => <p key={i}><b>{m.role === "user" ? "You" : "Check-in"}:</b> {m.content}</p>)}
+      <main className="fl fl-end">
+        <p className="fl-status">Call ended · {mmss}</p>
+        <h1>Today&apos;s plan</h1>
+        {!result && <p className="fl-dim">Saving the call…</p>}
+        {result?.error && <p className="fl-error">{result.error}</p>}
+        {result && !result.error && (
+          <>
+            <div className="fl-card">
+              <div className="fl-card-h"><b>Agreed</b></div>
+              {result.plan.length ? (
+                <ul className="fl-plan">{result.plan.map((p, i) => <li key={i}><time>{p.time ?? "any time"}</time><span>{p.action}</span></li>)}</ul>
+              ) : <p className="fl-dim">Nothing agreed this time.</p>}
+            </div>
+            <div className="fl-card"><div className="fl-card-h"><b>Stress</b><span>{result.stress ? `${result.stress} of 5` : "not given"}</span></div></div>
+          </>
+        )}
+        <div className="fl-end-actions">
+          <a className="fl-big" href="/dashboard">Open dashboard</a>
+          <button className="link-btn" id="again" onClick={() => setPhase("idle")}>Back</button>
         </div>
-        <p className="fl-ms">Per turn (ms): {turns.map((t) => `stt ${t.stt} · llm ${t.llm} · tts ${t.tts}`).join(" | ")}</p>
-        <button className="fl-big" id="again" onClick={() => setPhase("idle")}>Done</button>
+        {turns.length > 0 && <p className="fl-ms">Response time per turn: {turns.map((t) => `${((t.stt + t.llm + t.tts) / 1000).toFixed(1)} s`).join(", ")}</p>}
       </main>
     );
   }

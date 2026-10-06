@@ -19,6 +19,9 @@ export const config = {
   ttsModel: process.env.OPENROUTER_TTS_MODEL ?? "deepgram/aura-2",
   ttsVoice: process.env.OPENROUTER_TTS_VOICE ?? "aura-2-thalia-en",
 
+  timeZone: process.env.APP_TIME_ZONE ?? "Europe/London", // dates on the dashboard and in call records
+  activeDaySteps: Number(process.env.ACTIVE_DAY_STEPS ?? 6000), // a day counts as active at or above this
+
   elevenlabsKey: process.env.ELEVENLABS_API_KEY,
   elevenlabsVoice: () => req("ELEVENLABS_VOICE_ID"),
   elevenlabsModel: process.env.ELEVENLABS_MODEL ?? "eleven_v4_turbo",
