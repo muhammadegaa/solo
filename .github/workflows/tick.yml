@@ -9,4 +9,5 @@ jobs:
   tick:
     runs-on: ubuntu-latest
     steps:
-      - run: curl -fsS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" https://usesolo.vercel.app/api/cron/tick
+      - run: |
+          curl -fsS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" https://usesolo.vercel.app/api/cron/tick
