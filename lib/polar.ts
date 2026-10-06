@@ -1,21 +1,16 @@
 // Polar AccessLink v3: https://www.polar.com/accesslink-api/
-// Single user: the access token lives in POLAR_ACCESS_TOKEN. Polar tokens do not expire unless revoked.
+// Each user's token is stored in Firestore. Polar tokens do not expire unless revoked.
+import { config } from "./config";
 
 const AUTH_URL = "https://flow.polar.com/oauth2/authorization";
 const TOKEN_URL = "https://polarremote.com/v2/oauth2/token";
 const API_URL = "https://www.polaraccesslink.com/v3";
 
-const env = (k: string) => {
-  const v = process.env[k];
-  if (!v) throw new Error(`Missing ${k} in .env.local`);
-  return v;
-};
-
 export function authorizeUrl(state: string): string {
   const u = new URL(AUTH_URL);
   u.searchParams.set("response_type", "code");
-  u.searchParams.set("client_id", env("POLAR_CLIENT_ID"));
-  u.searchParams.set("redirect_uri", env("POLAR_REDIRECT_URI"));
+  u.searchParams.set("client_id", config.polarClientId());
+  u.searchParams.set("redirect_uri", config.polarRedirectUri());
   u.searchParams.set("scope", "accesslink.read_all");
   u.searchParams.set("state", state);
   return u.toString();
@@ -23,7 +18,7 @@ export function authorizeUrl(state: string): string {
 
 // The code expires in 10 minutes and must be used once; reusing it makes Polar delete all issued tokens.
 export async function exchangeCode(code: string): Promise<{ access_token: string; x_user_id: number }> {
-  const basic = Buffer.from(`${env("POLAR_CLIENT_ID")}:${env("POLAR_CLIENT_SECRET")}`).toString("base64");
+  const basic = Buffer.from(`${config.polarClientId()}:${config.polarClientSecret()}`).toString("base64");
   const res = await fetch(TOKEN_URL, {
     method: "POST",
     headers: {
@@ -31,7 +26,7 @@ export async function exchangeCode(code: string): Promise<{ access_token: string
       "Content-Type": "application/x-www-form-urlencoded",
       Accept: "application/json;charset=UTF-8",
     },
-    body: new URLSearchParams({ grant_type: "authorization_code", code, redirect_uri: env("POLAR_REDIRECT_URI") }),
+    body: new URLSearchParams({ grant_type: "authorization_code", code, redirect_uri: config.polarRedirectUri() }),
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok || !body.access_token) throw new Error(`Token exchange failed (${res.status}): ${JSON.stringify(body)}`);
@@ -39,19 +34,25 @@ export async function exchangeCode(code: string): Promise<{ access_token: string
 }
 
 // Data is only readable for registered users. 409 means already registered.
-export async function registerUser(token: string, userId: number): Promise<number> {
+export async function registerUser(token: string, memberId: string): Promise<number> {
   const res = await fetch(`${API_URL}/users`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ "member-id": `self-${userId}` }),
+    body: JSON.stringify({ "member-id": memberId }),
   });
   if (res.status !== 200 && res.status !== 409) throw new Error(`Register failed (${res.status}): ${await res.text()}`);
   return res.status;
 }
 
-async function get<T>(path: string): Promise<T | null> {
+// Removes this app's access to the user's data. 404 means already gone.
+export async function deregisterUser(token: string, polarUserId: number): Promise<void> {
+  const res = await fetch(`${API_URL}/users/${polarUserId}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok && res.status !== 404) throw new Error(`Deregister failed (${res.status}): ${await res.text()}`);
+}
+
+async function get<T>(token: string, path: string): Promise<T | null> {
   const res = await fetch(`${API_URL}${path}`, {
-    headers: { Authorization: `Bearer ${env("POLAR_ACCESS_TOKEN")}`, Accept: "application/json" },
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
     cache: "no-store",
   });
   if (res.status === 204) return null;
@@ -89,13 +90,13 @@ export type Activity = {
 const isoDate = (d: Date) => d.toISOString().slice(0, 10);
 
 // Sleep and Nightly Recharge only expose the last 28 days; activities allow a 28-day range.
-export async function fetchRaw(days: number) {
+export async function fetchRaw(token: string, days: number) {
   const to = new Date();
   const from = new Date(to.getTime() - (days - 1) * 86_400_000);
   const [sleep, recharge, activities] = await Promise.all([
-    get<{ nights: Night[] }>("/users/sleep"),
-    get<{ recharges: Recharge[] }>("/users/nightly-recharge"),
-    get<Activity[]>(`/users/activities?from=${isoDate(from)}&to=${isoDate(to)}`),
+    get<{ nights: Night[] }>(token, "/users/sleep"),
+    get<{ recharges: Recharge[] }>(token, "/users/nightly-recharge"),
+    get<Activity[]>(token, `/users/activities?from=${isoDate(from)}&to=${isoDate(to)}`),
   ]);
   return { nights: sleep?.nights ?? [], recharges: recharge?.recharges ?? [], activities: activities ?? [], from, to };
 }

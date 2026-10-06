@@ -16,7 +16,9 @@ These decisions replace the tap-and-text interface described below where they co
 - **Visual direction: First light.** The call screen is a dawn sky with a horizon line for the voice and large serif captions. The dashboard is light. Mockup: `designs/call-directions.html`, direction A.
 - **Voice pipeline**, all through OpenRouter, one key: browser records WAV, then `/audio/transcriptions`, then `/chat/completions`, then `/audio/speech` (MP3). The call is turn-based, not live streaming. Latency per turn is **not verified**; measure it in M1.
 - **Coaching (idea A)**: a human coach reviews the week and replies with a voice note. Deferred until the solo version works for you.
-- **Access**: one passcode, because the deployed URL can spend OpenRouter credit.
+- **Access**: invite-only accounts. Firebase Auth (email + password) on the free tier, invites stored in Firestore. Replaces the earlier passcode.
+- **Storage**: Firestore in London (`europe-west2`), server-only through the Admin SDK; client rules deny everything. Replaces Supabase.
+- **Models (measured 2026-10-06)**: chat `anthropic/claude-haiku-4.5` (~1.5–2 s per reply vs ~3 s for Sonnet 5.5); transcription `openai/gpt-4o-mini-transcribe` (~0.8 s); voice ElevenLabs `eleven_v4_turbo` when set, else `deepgram/aura-2` via OpenRouter (2.8–7.7 s, too slow for a call).
 
 ### Build milestones
 1. **M1 voice loop:** on your iPhone, from the home-screen app, tap Start call, hear the AI open the call (with your Polar sleep if connected), and speak two replies. **Pass:** 3 turns complete in standalone mode, captions match what was said, and per-turn latency is recorded.

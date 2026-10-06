@@ -1,4 +1,5 @@
 import { fetchRaw, toRows } from "./polar";
+import { getPolarLink } from "./store";
 
 export type Night = { date: string; sleepH: number | null; bed: string | null };
 export type CallContext = { nights: Night[]; usualH: number | null; summary: string };
@@ -11,10 +12,11 @@ const median = (xs: number[]) => {
 };
 
 // Without a Polar token the call runs in no-device mode.
-export async function getCallContext(): Promise<CallContext> {
-  if (!process.env.POLAR_ACCESS_TOKEN) return { nights: [], usualH: null, summary: "No wearable data. Ask how they slept." };
+export async function getCallContext(uid: string): Promise<CallContext> {
+  const link = await getPolarLink(uid);
+  if (!link) return { nights: [], usualH: null, summary: "No wearable data. Ask how they slept." };
   try {
-    const rows = toRows(await fetchRaw(14), 14);
+    const rows = toRows(await fetchRaw(link.accessToken, 14), 14);
     const usualH = median(rows.map((r) => r.sleepH).filter((x): x is number => x !== null));
     const nights = rows.slice(0, 7).reverse().map((r) => ({ date: r.date, sleepH: r.sleepH, bed: r.bed }));
     const last = rows[0];

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAuthed } from "@/lib/auth";
+import { getUser } from "@/lib/auth";
 import { systemPrompt } from "@/lib/context";
 import { chat, speak, transcribe, type Msg } from "@/lib/openrouter";
 
@@ -7,7 +7,7 @@ export const maxDuration = 60;
 
 // One turn: optional user audio in, AI reply text + speech out. Timings are returned to measure latency (M1).
 export async function POST(req: NextRequest) {
-  if (!(await isAuthed())) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  if (!(await getUser())) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   const { audio, history, summary } = (await req.json()) as { audio?: string; history: Msg[]; summary: string };
 
   try {

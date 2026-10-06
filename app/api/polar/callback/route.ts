@@ -1,30 +1,30 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { getUser } from "@/lib/auth";
 import { exchangeCode, registerUser } from "@/lib/polar";
+import { savePolarLink } from "@/lib/store";
 
-const page = (body: string, status = 200) =>
-  new Response(`<!doctype html><meta charset="utf-8"><body style="font-family:system-ui;max-width:640px;margin:40px auto;padding:0 16px">${body}</body>`, {
-    status,
-    headers: { "Content-Type": "text/html; charset=utf-8" },
-  });
+const back = (req: NextRequest, status: string) => {
+  const res = NextResponse.redirect(new URL(`/dashboard?polar=${status}`, req.url));
+  res.cookies.delete("polar_state");
+  return res;
+};
 
-// Single-user setup: show the token once so it can be pasted into .env.local.
 export async function GET(req: NextRequest) {
+  const user = await getUser();
+  if (!user) return NextResponse.redirect(new URL("/login", req.url));
   const q = req.nextUrl.searchParams;
-  if (q.get("error")) return page(`<p>Polar returned an error: ${q.get("error")}</p>`, 400);
-  if (!q.get("state") || q.get("state") !== req.cookies.get("polar_state")?.value) return page("<p>State mismatch. Start again from /api/polar/connect.</p>", 400);
+  if (q.get("error")) return back(req, "denied");
+  if (!q.get("state") || q.get("state") !== req.cookies.get("polar_state")?.value) return back(req, "expired");
   const code = q.get("code");
-  if (!code) return page("<p>No code in the callback.</p>", 400);
+  if (!code) return back(req, "failed");
 
   try {
     const { access_token, x_user_id } = await exchangeCode(code);
-    const status = await registerUser(access_token, x_user_id);
-    return page(`
-      <h1>Connected</h1>
-      <p>Polar user ${x_user_id} registered (HTTP ${status}).</p>
-      <p>Add this line to <code>.env.local</code>, then restart <code>npm run dev</code>:</p>
-      <pre style="white-space:pre-wrap;word-break:break-all;background:#f3f3f3;padding:12px">POLAR_ACCESS_TOKEN=${access_token}</pre>
-    `);
+    await registerUser(access_token, user.uid);
+    await savePolarLink(user.uid, { polarUserId: x_user_id, accessToken: access_token });
+    return back(req, "connected");
   } catch (e) {
-    return page(`<p>${(e as Error).message}</p>`, 500);
+    console.error("polar callback", e);
+    return back(req, "failed");
   }
 }
