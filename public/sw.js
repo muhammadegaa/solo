@@ -1,7 +1,7 @@
 // Solo service worker: shows pushes and opens the right page when one is tapped.
 self.addEventListener("push", (event) => {
   const data = event.data ? event.data.json() : {};
-  event.waitUntil(self.registration.showNotification(data.title || "Solo", { body: data.body || "", data: { url: data.url || "/call" }, tag: data.tag }));
+  event.waitUntil(self.registration.showNotification(data.title || "Solo", { body: data.body || "", icon: "/icon-192.png", data: { url: data.url || "/call" }, tag: data.tag }));
 });
 
 self.addEventListener("notificationclick", (event) => {
