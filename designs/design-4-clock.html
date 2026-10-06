@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>24-Hour Clock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;600&family=Martian+Mono:wght@400&display=swap">
+<style>
+/* Layout: the day is a 24-hour dial. Last night's sleep is an arc, today's small actions are marks on the rim. Dark only by choice: it is read first thing in the morning and last thing at night. */
+:root {
+  --bg: #15131c;
+  --surface: #1d1a26;
+  --raised: #262233;
+  --text: #ece8f4;
+  --muted: #9c95ad;
+  --line: #322d42;
+  --sleep: #7f8cff;
+  --usual: #4a4466;
+  --lamp: #f2b45c;
+  --lamp-ink: #1d1a26;
+  --display: "Bricolage Grotesque", system-ui, sans-serif;
+  --body: "Figtree", system-ui, sans-serif;
+  --mono: "Martian Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--body); padding: 32px 16px 48px; }
+header { max-width: 1200px; margin: 0 auto 28px; display: grid; gap: 6px; }
+header h1 { font: 700 40px/1 var(--display); margin: 0; letter-spacing: -.01em; }
+header p { margin: 0; max-width: 62ch; color: var(--muted); line-height: 1.5; }
+.board { max-width: 1200px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 28px; justify-content: center; }
+figure { margin: 0; display: grid; gap: 10px; justify-items: center; }
+figcaption { font: 10.5px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.phone { width: 300px; max-width: 100%; height: 620px; border-radius: 40px; background: #08070b; padding: 12px; border: 1px solid var(--line); }
+.screen { height: 100%; border-radius: 30px; background: var(--surface); overflow: hidden; display: flex; flex-direction: column; position: relative; }
+.status { display: flex; justify-content: space-between; padding: 14px 20px 0; font: 10px var(--mono); color: var(--muted); }
+.content { flex: 1; padding: 10px 20px 18px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+h2 { font: 700 24px/1.1 var(--display); margin: 0; text-wrap: balance; }
+.lede { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.45; }
+.dial { width: 220px; height: 220px; align-self: center; }
+.dial text { fill: var(--muted); font: 9px var(--mono); }
+.plan { display: grid; gap: 6px; }
+.plan div { display: grid; grid-template-columns: 50px 1fr; gap: 8px; align-items: baseline; font-size: 15px; }
+.plan time { font: 10px var(--mono); color: var(--lamp); font-variant-numeric: tabular-nums; }
+.chips { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.chip { font: 600 13.5px var(--body); padding: 10px 6px; border-radius: 12px; border: 1px solid var(--line); background: var(--raised); color: var(--text); }
+.chip.primary { background: var(--lamp); border-color: var(--lamp); color: var(--lamp-ink); }
+button:focus-visible, .field:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
+.field { font: 14px var(--body); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--raised); color: var(--text); width: 100%; }
+.scale { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.scale button { font: 700 20px var(--display); height: 46px; border-radius: 12px; border: 1px solid var(--line); background: var(--raised); color: var(--text); }
+.scale button.on { background: var(--lamp); color: var(--lamp-ink); border-color: var(--lamp); }
+.scale-labels { display: flex; justify-content: space-between; font: 9.5px var(--mono); color: var(--muted); }
+.big-time { font: 700 64px/1 var(--display); color: var(--lamp); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.nights { display: grid; gap: 7px; }
+.night { display: grid; grid-template-columns: 22px 1fr 16px; gap: 8px; align-items: center; font: 10px var(--mono); color: var(--muted); }
+.track { position: relative; height: 12px; border-radius: 6px; background: var(--raised); }
+.track span { position: absolute; top: 0; bottom: 0; border-radius: 6px; background: var(--sleep); }
+.night b { color: var(--text); font-weight: 400; text-align: right; }
+.axis { display: grid; grid-template-columns: 22px 1fr 16px; gap: 8px; font: 9px var(--mono); color: var(--muted); }
+.axis div { display: flex; justify-content: space-between; }
+table { border-collapse: collapse; font: 10.5px var(--mono); width: 100%; font-variant-numeric: tabular-nums; }
+th { font-weight: 400; color: var(--muted); }
+th, td { text-align: right; padding: 6px 3px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 15px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.row span:last-child { font: 10.5px var(--mono); color: var(--muted); }
+.danger { color: #ff8a7a; font-weight: 600; }
+.push { position: absolute; left: 10px; right: 10px; top: 32px; background: var(--raised); border: 1px solid var(--line); border-radius: 16px; padding: 10px 12px; font-size: 13px; display: grid; gap: 2px; box-shadow: 0 10px 24px rgba(0,0,0,.4); }
+.push b { font: 9.5px var(--mono); color: var(--muted); font-weight: 400; }
+.source { font: 9.5px var(--mono); color: var(--muted); margin: 0; }
+.key { display: flex; gap: 12px; flex-wrap: wrap; font: 9.5px var(--mono); color: var(--muted); justify-content: center; }
+.key i { display: inline-block; width: 10px; height: 4px; border-radius: 2px; margin-right: 4px; vertical-align: 2px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>4 · 24-hour clock</h1>
+  <p>Your day is shown as a 24-hour clock. Last night's sleep is drawn against your usual sleep window, and today's actions sit as marks on the rim. It looks at timing rather than amounts, because a regular bedtime and getting outside at a set time are what you can change most easily.</p>
+</header>
+<main class="board">
+
+<figure>
+  <div class="phone"><div class="screen">
+    <div class="status"><span>07:31</span><span>TUE 6 OCT</span></div>
+    <div class="content">
+      <h2>Later to bed, shorter night.</h2>
+      <svg class="dial" viewBox="0 0 220 220" role="img" aria-label="24-hour dial: slept 00:40 to 06:50; usual 23:40 to 07:00; walk at 10:30; breathing at 15:00">
+        <circle cx="110" cy="110" r="90" fill="none" stroke="#322d42" stroke-width="2"/>
+        <path d="M103.4 34.3 A76 76 0 0 1 183.4 129.7" fill="none" stroke="#4a4466" stroke-width="6" stroke-linecap="round"/>
+        <path d="M125.6 21.4 A90 90 0 0 1 197.9 129.5" fill="none" stroke="#7f8cff" stroke-width="10" stroke-linecap="round"/>
+        <circle cx="144.4" cy="193.2" r="7" fill="#f2b45c"/>
+        <circle cx="46.4" cy="173.6" r="7" fill="none" stroke="#f2b45c" stroke-width="2"/>
+        <line x1="110" y1="110" x2="193" y2="144.8" stroke="#ece8f4" stroke-width="1.5"/>
+        <circle cx="110" cy="110" r="3" fill="#ece8f4"/>
+        <text x="104" y="12">00</text><text x="205" y="113">06</text><text x="104" y="216">12</text><text x="1" y="113">18</text>
+      </svg>
+      <div class="key"><span><i style="background:#7f8cff"></i>last night</span><span><i style="background:#4a4466"></i>your usual</span></div>
+      <div class="plan">
+        <div><time>10:30</time><span>10-min walk outside</span></div>
+        <div><time>15:00</time><span>3 min slow breathing</span></div>
+      </div>
+      <div class="chips" role="group" aria-label="Reply">
+        <button class="chip primary" id="d4-ok">Sounds good</button>
+        <button class="chip" id="d4-bad">Slept badly</button>
+        <button class="chip" id="d4-busy">Busy today</button>
+        <button class="chip" id="d4-low">Feeling low</button>
+      </div>
+    </div>
+  </div></div>
+  <figcaption>Today</figcaption>
+</figure>
+
+<figure>
+  <div class="phone"><div class="screen">
+    <div class="push"><b>10:30 · CHECK-IN</b>Walk time. 10 minutes outside.</div>
+    <div class="content" style="padding-top:100px">
+      <span class="big-time">10:30</span>
+      <h2>10 minutes outside.</h2>
+      <p class="lede">Round the block counts.</p>
+      <div class="chips" style="grid-template-columns:repeat(3,1fr)" role="group" aria-label="Walk">
+        <button class="chip primary" id="n4-done">Done</button>
+        <button class="chip" id="n4-later">Later</button>
+        <button class="chip" id="n4-skip">Skip</button>
+      </div>
+      <p class="lede">How stressed right now?</p>
+      <div class="scale" role="group" aria-label="Stress 1 to 5">
+        <button id="n4-s1">1</button><button id="n4-s2">2</button><button class="on" id="n4-s3">3</button><button id="n4-s4">4</button><button id="n4-s5">5</button>
+      </div>
+      <div class="scale-labels"><span>calm</span><span>very stressed</span></div>
+    </div>
+  </div></div>
+  <figcaption>Nudge</figcaption>
+</figure>
+
+<figure>
+  <div class="phone"><div class="screen">
+    <div class="status"><span>SUN 11 OCT</span><span>WEEK</span></div>
+    <div class="content">
+      <h2>Stress eased from 4 to 2.</h2>
+      <p class="lede">Bedtime moved between 23:05 and 00:40. Outside on 5 of 7 days.</p>
+      <div class="nights" aria-label="Sleep window each night, 22:00 to 08:00, with that day's stress rating">
+        <div class="night">Mon<div class="track"><span style="left:15%;width:72.5%"></span></div><b>4</b></div>
+        <div class="night">Tue<div class="track"><span style="left:21.7%;width:68.3%"></span></div><b>4</b></div>
+        <div class="night">Wed<div class="track"><span style="left:18.3%;width:70%"></span></div><b>3</b></div>
+        <div class="night">Thu<div class="track"><span style="left:21.7%;width:66.6%"></span></div><b>3</b></div>
+        <div class="night">Fri<div class="track"><span style="left:10.8%;width:79.2%"></span></div><b>2</b></div>
+        <div class="night">Sat<div class="track"><span style="left:12.5%;width:80.8%"></span></div><b>3</b></div>
+        <div class="night">Sun<div class="track"><span style="left:26.7%;width:61.6%"></span></div><b>2</b></div>
+      </div>
+      <div class="axis"><span></span><div><span>22:00</span><span>03:00</span><span>08:00</span></div><span></span></div>
+      <p class="source">Right column: your average stress that day, 1–5.</p>
+    </div>
+  </div></div>
+  <figcaption>Week</figcaption>
+</figure>
+
+<figure>
+  <div class="phone"><div class="screen">
+    <div class="status"><span>DETAILS</span><span>14 DAYS</span></div>
+    <div class="content">
+      <h2>The numbers</h2>
+      <p class="lede">Usual: 7.2 h, bed 23:40, wake 07:00, HRV 46 ms.</p>
+      <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th>Day</th><th>Bed</th><th>Wake</th><th>Sleep</th><th>HRV</th><th>Steps</th></tr></thead>
+        <tbody>
+          <tr><td>6 Oct</td><td>00:40</td><td>06:50</td><td>6.1</td><td>41</td><td>—</td></tr>
+          <tr><td>5 Oct</td><td>23:15</td><td>07:05</td><td>7.4</td><td>47</td><td>6,880</td></tr>
+          <tr><td>4 Oct</td><td>23:50</td><td>07:10</td><td>7.0</td><td>45</td><td>3,120</td></tr>
+          <tr><td>3 Oct</td><td>00:10</td><td>07:00</td><td>6.6</td><td>43</td><td>8,410</td></tr>
+          <tr><td>2 Oct</td><td>23:05</td><td>06:55</td><td>7.6</td><td>49</td><td>5,240</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="source">Data from Polar. Example values.</p>
+    </div>
+  </div></div>
+  <figcaption>Details</figcaption>
+</figure>
+
+<figure>
+  <div class="phone"><div class="screen">
+    <div class="status"><span>SETTINGS</span><span></span></div>
+    <div class="content">
+      <h2>Settings</h2>
+      <div>
+        <div class="row"><span>Morning clock</span><span>07:30</span></div>
+        <div class="row"><span>Check-ins</span><span>10:30, 15:00</span></div>
+        <div class="row"><span>Bedtime aim</span><span>before 00:00</span></div>
+        <div class="row"><span>Busy today</span><span>Off</span></div>
+        <div class="row"><span>Polar Loop</span><span>Connected</span></div>
+        <div class="row"><span>No-wearable mode</span><span>Off</span></div>
+        <div class="row"><span class="danger">Delete all my data</span><span></span></div>
+      </div>
+    </div>
+  </div></div>
+  <figcaption>Settings</figcaption>
+</figure>
+
+</main>
+</body>
+</html>

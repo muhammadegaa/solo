@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fridge Note</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gochi+Hand&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,800&family=Courier+Prime&display=swap">
+<style>
+/* Layout: five phone screens on a cork board; each screen is a handwritten note held by a magnet. Single warm theme by choice. */
+:root {
+  --board: #c9a77c;
+  --board-dot: #b8946a;
+  --paper: #fffdf3;
+  --paper-yellow: #fff3a8;
+  --ink: #2b2a33;
+  --ink-soft: #5d5a66;
+  --marker: #2f5fb3;
+  --magnet: #d94f3d;
+  --hand: "Gochi Hand", "Comic Sans MS", cursive;
+  --body: "Nunito Sans", system-ui, sans-serif;
+  --mono: "Courier Prime", ui-monospace, monospace;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--board); color: var(--ink); font-family: var(--body);
+  background-image: radial-gradient(var(--board-dot) 1px, transparent 1.5px); background-size: 14px 14px;
+  padding: 32px 16px 48px;
+}
+header { max-width: 1200px; margin: 0 auto 28px; display: grid; gap: 6px; }
+header h1 { font-family: var(--hand); font-size: 44px; margin: 0; font-weight: 400; text-wrap: balance; }
+header p { margin: 0; max-width: 62ch; color: #3e3428; line-height: 1.5; }
+.board { max-width: 1200px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 28px; justify-content: center; }
+figure { margin: 0; display: grid; gap: 10px; justify-items: center; }
+figcaption { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #3e3428; }
+.phone {
+  width: 300px; max-width: 100%; height: 620px; border-radius: 40px; background: #1d1c22; padding: 12px;
+  box-shadow: 0 18px 40px rgba(60,40,20,.35);
+}
+.screen { height: 100%; border-radius: 30px; background: var(--paper); overflow: hidden; display: flex; flex-direction: column; position: relative; }
+.status { display: flex; justify-content: space-between; padding: 12px 22px 4px; font-size: 12px; font-weight: 600; color: var(--ink-soft); }
+.content { flex: 1; padding: 14px 20px 18px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto;
+  background-image: repeating-linear-gradient(transparent 0 27px, #e8e3cf 27px 28px); background-position: 0 6px; }
+.magnet { width: 22px; height: 22px; border-radius: 50%; background: var(--magnet); box-shadow: inset -3px -3px 0 rgba(0,0,0,.18); align-self: center; margin-bottom: -4px; }
+.date { font-family: var(--mono); font-size: 12px; color: var(--ink-soft); }
+.hand { font-family: var(--hand); font-size: 26px; line-height: 1.12; color: var(--marker); margin: 0; }
+.hand.big { font-size: 32px; }
+.plain { margin: 0; font-size: 15px; line-height: 1.5; }
+.sticky { background: var(--paper-yellow); padding: 14px 14px 16px; transform: rotate(-1.2deg); box-shadow: 0 6px 12px rgba(0,0,0,.12); display: grid; gap: 8px; }
+.sticky ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 15px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font: 600 14px var(--body); padding: 9px 13px; border-radius: 999px; border: 2px solid var(--ink); background: var(--paper); color: var(--ink); }
+.chip.primary { background: var(--ink); color: var(--paper); }
+.chip:focus-visible, .field:focus-visible { outline: 3px solid var(--marker); outline-offset: 2px; }
+.field { font: 15px var(--body); border: 2px dashed var(--ink-soft); border-radius: 12px; padding: 10px 12px; background: transparent; color: var(--ink); width: 100%; }
+.scale { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.scale button { font: 400 24px var(--hand); height: 48px; border-radius: 12px; border: 2px solid var(--ink); background: var(--paper); color: var(--ink); }
+.scale button.on { background: var(--marker); color: var(--paper); border-color: var(--marker); }
+.scale-labels { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-soft); }
+.small { font-size: 12px; color: var(--ink-soft); margin: 0; }
+svg text { fill: var(--ink-soft); font: 11px var(--mono); }
+table { border-collapse: collapse; font-family: var(--mono); font-size: 12px; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { text-align: right; padding: 5px 4px; border-bottom: 1px solid #e8e3cf; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 15px; padding: 8px 0; border-bottom: 1px solid #e8e3cf; }
+.row b { font-weight: 600; }
+.toggle { width: 42px; height: 24px; border-radius: 99px; background: var(--ink); position: relative; flex: none; }
+.toggle::after { content: ""; position: absolute; right: 3px; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--paper); }
+.toggle.off { background: #cfc9b4; } .toggle.off::after { right: auto; left: 3px; }
+.danger { color: var(--magnet); font-weight: 600; }
+.push { position: absolute; left: 10px; right: 10px; top: 34px; background: rgba(255,255,255,.96); border-radius: 18px; padding: 10px 12px; box-shadow: 0 8px 20px rgba(0,0,0,.18); font-size: 13px; display: grid; gap: 2px; }
+.push b { font-size: 12px; color: var(--ink-soft); font-weight: 600; }
+.source { font-size: 11px; color: var(--ink-soft); margin: 0; }
+@media (prefers-reduced-motion: no-preference) { .sticky { transition: transform .2s; } .sticky:hover { transform: rotate(0); } }
+</style>
+</head>
+<body>
+<header>
+  <h1>1 · Fridge note</h1>
+  <p>The app writes to you like a note left on the fridge. Handwriting for what it says, plain type for what you tap. No charts on the main screen and nothing that looks like a dashboard.</p>
+</header>
+<main class="board">
+
+<figure>
+  <div class="phone"><div class="screen">
+    <div class="status"><span>07:31</span><span>Today</span></div>
+    <div class="content">
+      <div class="magnet" aria-hidden="true"></div>
+      <span class="date">Tue 6 Oct</span>
+      <p class="hand big">Shorter night than usual. Woke up a couple of times.</p>
+      <div class="sticky">
+        <p class="hand">Today, just this:</p>
+        <ul>
+          <li>10-minute walk outside before lunch</li>
+          <li>3 minutes of slow breathing after</li>
+        </ul>
+      </div>
+      <div class="chips" role="group" aria-label="Reply">
+        <button class="chip primary" id="d1-ok">Sounds good</button>
+        <button class="chip" id="d1-bad">Slept badly</button>
+        <button class="chip" id="d1-busy">Busy today</button>
+        <button class="chip" id="d1-low">Feeling low</button>
+      </div>
+      <input class="field" id="d1-text" placeholder="Anything else? (optional)" aria-label="Optional note">
+    </div>
+  </div></div>
+  <figcaption>Today</figcaption>
+</figure>
+
+<figure>
+  <div class="phone"><div class="screen">
+    <div class="status"><span>11:00</span><span></span></div>
+    <div class="push"><b>CHECK-IN · now</b>Time for the 10-minute walk?</div>
+    <div class="content" style="padding-top:96px">
+      <p class="hand big">Time for the 10-minute walk?</p>
+      <p class="plain">Round the block counts.</p>
+      <div class="chips" role="group" aria-label="Walk">
+        <button class="chip primary" id="n1-done">Done</button>
+        <button class="chip" id="n1-later">Later</button>
+        <button class="chip" id="n1-skip">Skip</button>
+      </div>
+      <p class="hand">How stressed right now?</p>
+      <div class="scale" role="group" aria-label="Stress 1 to 5">
+        <button id="n1-s1">1</button><button id="n1-s2">2</button><button class="on" id="n1-s3">3</button><button id="n1-s4">4</button><button id="n1-s5">5</button>
+      </div>
+      <div class="scale-labels"><span>calm</span><span>very stressed</span></div>
+    </div>
+  </div></div>
+  <figcaption>Nudge</figcaption>
+</figure>
+
+<figure>
+  <div class="phone"><div class="screen">
+    <div class="status"><span>Sun 11 Oct</span><span>Week</span></div>
+    <div class="content">
+      <p class="hand big">Your week</p>
+      <p class="plain">Stress came down from 4 to 2 by Sunday. You got outside on 5 of 7 days. Bedtime moved around by about an hour.</p>
+      <svg viewBox="0 0 260 130" role="img" aria-label="Stress rating Monday to Sunday: 4, 4, 3, 3, 2, 3, 2">
+        <text x="2" y="24">5</text><text x="2" y="104">1</text>
+        <line x1="16" y1="20" x2="256" y2="20" stroke="#e8e3cf"/><line x1="16" y1="100" x2="256" y2="100" stroke="#e8e3cf"/>
+        <polyline fill="none" stroke="#2f5fb3" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" points="26,40 64,40 102,60 140,60 178,80 216,60 254,80"/>
+        <circle cx="254" cy="80" r="5" fill="#2f5fb3"/>
+        <text x="20" y="122">M</text><text x="58" y="122">T</text><text x="96" y="122">W</text><text x="134" y="122">T</text><text x="173" y="122">F</text><text x="211" y="122">S</text><text x="247" y="122">S</text>
+      </svg>
+      <div class="sticky"><p class="hand">Walks with the kids: Wed, Sat.</p></div>
+    </div>
+  </div></div>
+  <figcaption>Week</figcaption>
+</figure>
+
+<figure>
+  <div class="phone"><div class="screen">
+    <div class="status"><span>Details</span><span>14 days</span></div>
+    <div class="content">
+      <p class="hand">The numbers, if you want them</p>
+      <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th>Day</th><th>Sleep</th><th>Bed</th><th>HRV</th><th>Steps</th></tr></thead>
+        <tbody>
+          <tr><td>6 Oct</td><td>6.1h</td><td>00:40</td><td>41</td><td>—</td></tr>
+          <tr><td>5 Oct</td><td>7.4h</td><td>23:15</td><td>47</td><td>6,880</td></tr>
+          <tr><td>4 Oct</td><td>7.0h</td><td>23:50</td><td>45</td><td>3,120</td></tr>
+          <tr><td>3 Oct</td><td>6.6h</td><td>00:10</td><td>43</td><td>8,410</td></tr>
+          <tr><td>2 Oct</td><td>7.6h</td><td>23:05</td><td>49</td><td>5,240</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="small">Your usual (14-day median): 7.2h sleep, bed 23:40, HRV 46 ms.</p>
+      <p class="source">Data from Polar. Example values.</p>
+    </div>
+  </div></div>
+  <figcaption>Details</figcaption>
+</figure>
+
+<figure>
+  <div class="phone"><div class="screen">
+    <div class="status"><span>Settings</span><span></span></div>
+    <div class="content">
+      <p class="hand">Settings</p>
+      <div class="row"><b>Morning note</b><span>07:30</span></div>
+      <div class="row"><b>Check-ins</b><span>11:00 · 15:00</span></div>
+      <div class="row"><b>Busy today</b><span class="toggle off" role="switch" aria-checked="false" aria-label="Busy today"></span></div>
+      <div class="row"><b>Polar Loop</b><span>Connected</span></div>
+      <div class="row"><b>Use without a wearable</b><span class="toggle off" role="switch" aria-checked="false" aria-label="Use without a wearable"></span></div>
+      <div class="row"><span class="danger">Delete all my data</span><span></span></div>
+    </div>
+  </div></div>
+  <figcaption>Settings</figcaption>
+</figure>
+
+</main>
+</body>
+</html>

@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Forecast</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700&family=Public+Sans:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: each screen reads like a weather forecast for your day: a sky band on top for "conditions", then the outlook and actions below. */
+:root {
+  --bg: #e9eef2;
+  --surface: #ffffff;
+  --text: #17222b;
+  --muted: #5b6a76;
+  --line: #d5dde3;
+  --sky-a: #9fb9cc;
+  --sky-b: #dfe7ec;
+  --accent: #1f6f8b;
+  --accent-ink: #ffffff;
+  --sun: #e2a43b;
+  --display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --body: "Public Sans", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e151b; --surface: #16212a; --text: #e6edf2; --muted: #93a4b1; --line: #26343f;
+    --sky-a: #1d3647; --sky-b: #16212a; --accent: #5fb3d1; --accent-ink: #0b141a; --sun: #e9b45a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e151b; --surface: #16212a; --text: #e6edf2; --muted: #93a4b1; --line: #26343f;
+  --sky-a: #1d3647; --sky-b: #16212a; --accent: #5fb3d1; --accent-ink: #0b141a; --sun: #e9b45a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--body); padding: 32px 16px 48px; }
+header { max-width: 1200px; margin: 0 auto 28px; display: grid; gap: 6px; }
+header h1 { font: 700 40px/1 var(--display); text-transform: uppercase; letter-spacing: .02em; margin: 0; }
+header p { margin: 0; max-width: 62ch; color: var(--muted); line-height: 1.5; }
+.board { max-width: 1200px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 28px; justify-content: center; }
+figure { margin: 0; display: grid; gap: 10px; justify-items: center; }
+figcaption { font: 500 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.phone { width: 300px; max-width: 100%; height: 620px; border-radius: 40px; background: #0a0f13; padding: 12px; }
+.screen { height: 100%; border-radius: 30px; background: var(--surface); overflow: hidden; display: flex; flex-direction: column; position: relative; }
+.sky { background: linear-gradient(180deg, var(--sky-a), var(--sky-b)); padding: 14px 20px 18px; display: grid; gap: 4px; }
+.status { display: flex; justify-content: space-between; font: 500 11px var(--mono); color: var(--muted); }
+.label { font: 500 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.cond { font: 700 38px/0.95 var(--display); text-transform: uppercase; margin: 6px 0 2px; text-wrap: balance; }
+.sub { font-size: 14px; color: var(--text); margin: 0; line-height: 1.4; }
+.content { flex: 1; padding: 16px 20px 18px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
+.outlook { display: grid; gap: 8px; }
+.item { display: grid; grid-template-columns: 54px 1fr; gap: 10px; align-items: baseline; padding: 10px 0; border-top: 1px solid var(--line); }
+.item time { font: 500 12px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.item span { font-size: 15px; line-height: 1.35; }
+.chips { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.chip { font: 600 14px var(--body); padding: 11px 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+.chip.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+button:focus-visible, .field:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.field { font: 14px var(--body); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--bg); color: var(--text); width: 100%; }
+.scale { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.scale button { font: 700 22px var(--display); height: 46px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+.scale button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.scale-labels { display: flex; justify-content: space-between; font: 11px var(--mono); color: var(--muted); }
+.days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+.day { display: grid; gap: 6px; justify-items: center; font: 11px var(--mono); color: var(--muted); }
+.bar-track { height: 90px; width: 100%; display: flex; align-items: flex-end; justify-content: center; border-bottom: 1px solid var(--line); }
+.bar { width: 14px; border-radius: 4px 4px 0 0; background: var(--accent); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--sun); }
+.dot.no { background: transparent; border: 1px solid var(--line); }
+.legend { display: flex; gap: 14px; font: 11px var(--mono); color: var(--muted); align-items: center; flex-wrap: wrap; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: var(--accent); margin-right: 4px; vertical-align: -1px; }
+.legend i.sun { border-radius: 50%; background: var(--sun); }
+table { border-collapse: collapse; font: 12px var(--mono); width: 100%; font-variant-numeric: tabular-nums; }
+th { font-weight: 500; color: var(--muted); }
+th, td { text-align: right; padding: 6px 4px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 15px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.row span:last-child { font: 13px var(--mono); color: var(--muted); }
+.danger { color: #c4473a; font-weight: 600; }
+.push { position: absolute; left: 10px; right: 10px; top: 34px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 10px 12px; box-shadow: 0 8px 20px rgba(0,0,0,.2); font-size: 13px; display: grid; gap: 2px; z-index: 1; }
+.push b { font: 500 11px var(--mono); color: var(--muted); }
+.source { font: 11px var(--mono); color: var(--muted); margin: 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>2 · Forecast</h1>
+  <p>Your day is presented like a weather forecast. Last night is the conditions, today is the outlook, and each check-in is a time slot. People already read forecasts without stress, and the format carries no judgement.</p>
+</header>
+<main class="board">
+
+<figure>
+  <div class="phone"><div class="screen">
+    <div class="sky">
+      <div class="status"><span>07:31</span><span>TUE 6 OCT</span></div>
+      <span class="label">Overnight</span>
+      <p class="cond">Short and broken</p>
+      <p class="sub">About an hour less than your usual. Outlook: keep today light.</p>
+    </div>
+    <div class="content">
+      <div class="outlook">
+        <span class="label">Outlook</span>
+        <div class="item"><time>11:00</time><span>10-minute walk outside</span></div>
+        <div class="item"><time>15:00</time><span>3 minutes of slow breathing</span></div>
+      </div>
+      <div class="chips" role="group" aria-label="Reply">
+        <button class="chip primary" id="d2-ok">Sounds good</button>
+        <button class="chip" id="d2-bad">Slept badly</button>
+        <button class="chip" id="d2-busy">Busy today</button>
+        <button class="chip" id="d2-low">Feeling low</button>
+      </div>
+      <input class="field" id="d2-text" placeholder="Add a note (optional)" aria-label="Optional note">
+    </div>
+  </div></div>
+  <figcaption>Today</figcaption>
+</figure>
+
+<figure>
+  <div class="phone"><div class="screen">
+    <div class="push"><b>11:00 · CHECK-IN</b>10-minute walk outside. Round the block counts.</div>
+    <div class="sky" style="padding-top:100px">
+      <span class="label">11:00 slot</span>
+      <p class="cond">Walk, 10 min</p>
+      <p class="sub">Round the block counts.</p>
+    </div>
+    <div class="content">
+      <div class="chips" style="grid-template-columns:repeat(3,1fr)" role="group" aria-label="Walk">
+        <button class="chip primary" id="n2-done">Done</button>
+        <button class="chip" id="n2-later">Later</button>
+        <button class="chip" id="n2-skip">Skip</button>
+      </div>
+      <span class="label">Stress right now</span>
+      <div class="scale" role="group" aria-label="Stress 1 to 5">
+        <button id="n2-s1">1</button><button id="n2-s2">2</button><button class="on" id="n2-s3">3</button><button id="n2-s4">4</button><button id="n2-s5">5</button>
+      </div>
+      <div class="scale-labels"><span>calm</span><span>very stressed</span></div>
+    </div>
+  </div></div>
+  <figcaption>Nudge</figcaption>
+</figure>
+
+<figure>
+  <div class="phone"><div class="screen">
+    <div class="sky">
+      <div class="status"><span>SUN 11 OCT</span><span>WEEK</span></div>
+      <span class="label">This week</span>
+      <p class="cond">Clearing</p>
+      <p class="sub">Stress eased from 4 to 2. Outside on 5 of 7 days.</p>
+    </div>
+    <div class="content">
+      <div class="days" aria-label="Average stress per day, 1 to 5, and whether you went outside">
+        <div class="day"><div class="bar-track"><div class="bar" style="height:72px"></div></div><div class="dot"></div>M</div>
+        <div class="day"><div class="bar-track"><div class="bar" style="height:72px"></div></div><div class="dot no"></div>T</div>
+        <div class="day"><div class="bar-track"><div class="bar" style="height:54px"></div></div><div class="dot"></div>W</div>
+        <div class="day"><div class="bar-track"><div class="bar" style="height:54px"></div></div><div class="dot"></div>T</div>
+        <div class="day"><div class="bar-track"><div class="bar" style="height:36px"></div></div><div class="dot no"></div>F</div>
+        <div class="day"><div class="bar-track"><div class="bar" style="height:54px"></div></div><div class="dot"></div>S</div>
+        <div class="day"><div class="bar-track"><div class="bar" style="height:36px"></div></div><div class="dot"></div>S</div>
+      </div>
+      <div class="legend"><span><i></i>stress (bar height, 1–5)</span><span><i class="sun"></i>went outside</span></div>
+      <p class="sub">Bedtime ranged from 23:05 to 00:40.</p>
+    </div>
+  </div></div>
+  <figcaption>Week</figcaption>
+</figure>
+
+<figure>
+  <div class="phone"><div class="screen">
+    <div class="sky">
+      <div class="status"><span>DETAILS</span><span>14 DAYS</span></div>
+      <span class="label">Measurements</span>
+      <p class="sub">Your usual: 7.2 h sleep, bed 23:40, HRV 46 ms.</p>
+    </div>
+    <div class="content">
+      <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th>Day</th><th>Sleep</th><th>Bed</th><th>HRV</th><th>ANS</th><th>Steps</th></tr></thead>
+        <tbody>
+          <tr><td>6 Oct</td><td>6.1</td><td>00:40</td><td>41</td><td>−2.1</td><td>—</td></tr>
+          <tr><td>5 Oct</td><td>7.4</td><td>23:15</td><td>47</td><td>+1.4</td><td>6,880</td></tr>
+          <tr><td>4 Oct</td><td>7.0</td><td>23:50</td><td>45</td><td>+0.3</td><td>3,120</td></tr>
+          <tr><td>3 Oct</td><td>6.6</td><td>00:10</td><td>43</td><td>−0.8</td><td>8,410</td></tr>
+          <tr><td>2 Oct</td><td>7.6</td><td>23:05</td><td>49</td><td>+2.0</td><td>5,240</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="source">Data from Polar. Example values.</p>
+    </div>
+  </div></div>
+  <figcaption>Details</figcaption>
+</figure>
+
+<figure>
+  <div class="phone"><div class="screen">
+    <div class="sky">
+      <div class="status"><span>SETTINGS</span><span></span></div>
+      <p class="cond" style="font-size:30px">Settings</p>
+    </div>
+    <div class="content">
+      <div>
+        <div class="row"><span>Morning forecast</span><span>07:30</span></div>
+        <div class="row"><span>Check-in slots</span><span>11:00, 15:00</span></div>
+        <div class="row"><span>Busy today</span><span>Off</span></div>
+        <div class="row"><span>Polar Loop</span><span>Connected</span></div>
+        <div class="row"><span>No-wearable mode</span><span>Off</span></div>
+        <div class="row"><span class="danger">Delete all my data</span><span></span></div>
+      </div>
+    </div>
+  </div></div>
+  <figcaption>Settings</figcaption>
+</figure>
+
+</main>
+</body>
+</html>

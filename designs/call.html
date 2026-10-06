@@ -1,0 +1,355 @@
+<title>Check-in Call</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: the main interface is a short voice call. While the AI talks, small cards (a chart, today's plan, a stress scale) slide up under the captions. A separate /dashboard holds the details. */
+:root {
+  --bg: #f3f4ef; --surface: #fbfbf8; --text: #1f2620; --muted: #646d65; --line: #dde1d6;
+  --call: #18201a; --call-text: #eef2ea; --call-muted: #a3ad9f; --call-card: #232c24; --call-line: #34402f;
+  --accent: #3d5a40; --accent-ink: #f4f7f1; --voice: #9cc79a; --human: #b8743a; --human-soft: #f3e3d3; --end: #c4473a;
+  --ok: #3d7a4f; --watch: #b07a16;
+  --display: "Young Serif", Georgia, serif; --body: "Atkinson Hyperlegible", system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121612; --surface: #181d18; --text: #e5eadf; --muted: #9aa597; --line: #2a322a;
+    --call: #0d120e; --call-card: #1b231c; --call-line: #2c372c;
+    --accent: #8fb48f; --accent-ink: #0f140f; --human: #e0a16a; --human-soft: #3a2a1c; --ok: #7cc492; --watch: #e2b250; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121612; --surface: #181d18; --text: #e5eadf; --muted: #9aa597; --line: #2a322a;
+  --call: #0d120e; --call-card: #1b231c; --call-line: #2c372c;
+  --accent: #8fb48f; --accent-ink: #0f140f; --human: #e0a16a; --human-soft: #3a2a1c; --ok: #7cc492; --watch: #e2b250; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font-family: var(--body); padding-block: 40px 64px; padding-inline: 16px; }
+main { max-width: 1240px; margin: 0 auto; display: grid; gap: 44px; }
+h1 { font: 400 40px/1.08 var(--display); margin: 0; text-wrap: balance; }
+h2 { font: 400 26px/1.15 var(--display); margin: 0; }
+.lede { margin: 10px 0 0; color: var(--muted); font-size: 17px; line-height: 1.55; max-width: 66ch; }
+.eyebrow { font: 500 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+section { display: grid; gap: 18px; }
+.row-phones { display: flex; flex-wrap: wrap; gap: 24px; justify-content: center; }
+figure { margin: 0; display: grid; gap: 10px; justify-items: center; }
+figcaption { font: 500 12px var(--mono); color: var(--muted); text-align: center; max-width: 280px; line-height: 1.5; }
+figcaption b { color: var(--text); font-weight: 500; letter-spacing: .06em; text-transform: uppercase; display: block; }
+.phone { width: 280px; max-width: 100%; height: 590px; border-radius: 40px; background: #050705; padding: 11px; }
+.screen { height: 100%; border-radius: 30px; overflow: hidden; display: flex; flex-direction: column; position: relative; }
+.screen.call { background: var(--call); color: var(--call-text); }
+.screen.light { background: var(--surface); color: var(--text); }
+.status { display: flex; justify-content: space-between; padding: 12px 20px 0; font: 11px var(--mono); color: var(--call-muted); }
+
+/* call header */
+.who { display: grid; justify-items: center; gap: 4px; padding: 14px 16px 6px; }
+.orb { width: 64px; height: 64px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #c9e6c4, var(--voice) 45%, #4c7a4f); box-shadow: 0 0 0 8px rgba(156,199,154,.12), 0 0 0 18px rgba(156,199,154,.06); }
+.orb.small { width: 40px; height: 40px; box-shadow: 0 0 0 5px rgba(156,199,154,.12); }
+.who b { font: 400 17px var(--display); }
+.who span { font: 11px var(--mono); color: var(--call-muted); font-variant-numeric: tabular-nums; }
+.compact { display: flex; align-items: center; gap: 10px; padding: 12px 18px 4px; }
+.compact div { display: grid; }
+.compact b { font: 400 15px var(--display); }
+.compact span { font: 10.5px var(--mono); color: var(--call-muted); }
+.bars { display: flex; gap: 3px; align-items: center; height: 22px; margin-left: auto; }
+.bars i { width: 3px; border-radius: 2px; background: var(--voice); }
+.caption { padding: 8px 20px; display: grid; gap: 4px; }
+.caption .speaker { font: 500 10.5px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--call-muted); }
+.caption p { margin: 0; font-size: 17px; line-height: 1.4; }
+.caption.you p { color: var(--voice); }
+.ctx { margin: 6px 14px 0; background: var(--call-card); border: 1px solid var(--call-line); border-radius: 18px; padding: 12px 14px; display: grid; gap: 8px; }
+.ctx-head { display: flex; justify-content: space-between; align-items: baseline; }
+.ctx-head b { font: 400 14px var(--display); }
+.ctx-head span { font: 10px var(--mono); color: var(--call-muted); }
+.ctx svg text { fill: var(--call-muted); font: 9px var(--mono); }
+.dots { display: flex; gap: 5px; justify-content: center; }
+.dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--call-line); }
+.dots i.on { background: var(--call-text); }
+.plan { display: grid; gap: 6px; }
+.plan div { display: grid; grid-template-columns: 44px 1fr; gap: 8px; font-size: 14px; align-items: baseline; }
+.plan time { font: 10.5px var(--mono); color: var(--voice); }
+.plan s { color: var(--call-muted); }
+.new { font: 10px var(--mono); color: var(--voice); border: 1px solid var(--voice); border-radius: 99px; padding: 1px 6px; margin-left: 4px; }
+.scale { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+.scale button { height: 40px; border-radius: 10px; border: 1px solid var(--call-line); background: transparent; color: var(--call-text); font: 700 17px var(--body); }
+.scale button.on { background: var(--voice); color: var(--call); border-color: var(--voice); }
+.scale-l { display: flex; justify-content: space-between; font: 9.5px var(--mono); color: var(--call-muted); }
+.spacer { flex: 1; }
+.controls { display: flex; justify-content: space-around; align-items: center; padding: 12px 18px 22px; }
+.ctl { width: 50px; height: 50px; border-radius: 50%; border: 0; background: var(--call-card); color: var(--call-text); font: 500 10px var(--mono); display: grid; place-items: center; }
+.ctl.end { background: var(--end); color: #fff; width: 58px; height: 58px; }
+.ctl.on { background: var(--call-text); color: var(--call); }
+button:focus-visible, a:focus-visible { outline: 3px solid var(--voice); outline-offset: 2px; }
+
+/* start screen */
+.start { flex: 1; display: grid; align-content: center; justify-items: center; gap: 14px; padding: 20px; text-align: center; }
+.start .orb { width: 96px; height: 96px; }
+.start h3 { margin: 0; font: 400 24px/1.15 var(--display); text-wrap: balance; }
+.start p { margin: 0; color: var(--call-muted); font-size: 14px; line-height: 1.45; }
+.big-call { border: 0; border-radius: 999px; background: var(--voice); color: var(--call); font: 700 16px var(--body); padding: 14px 28px; }
+.text-link { color: var(--call-muted); font-size: 13px; text-decoration: underline; background: none; border: 0; }
+.push { position: absolute; left: 10px; right: 10px; top: 32px; background: rgba(255,255,255,.95); color: #1f2620; border-radius: 16px; padding: 10px 12px; font-size: 13px; display: grid; gap: 2px; }
+.push b { font: 500 10.5px var(--mono); color: #646d65; }
+
+/* summary */
+.sum { padding: 6px 18px 18px; display: grid; gap: 12px; overflow-y: auto; flex: 1; }
+.sum h3 { margin: 0; font: 400 22px/1.15 var(--display); }
+.sum .card { border: 1px solid var(--line); border-radius: 14px; padding: 12px; display: grid; gap: 6px; }
+.sum .k { font: 500 10.5px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.sum .plan time { color: var(--accent); }
+.sum a { color: var(--accent); font-weight: 700; font-size: 14px; }
+.coachline { font-size: 13px; color: var(--muted); }
+
+/* dashboard */
+.dash { border: 1px solid var(--line); border-radius: 18px; background: var(--surface); overflow: hidden; }
+.urlbar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); font: 12px var(--mono); color: var(--muted); }
+.urlbar i { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
+.urlbar span { margin-left: 8px; padding: 4px 10px; border-radius: 8px; background: var(--bg); }
+.dash-body { padding: 22px; display: grid; gap: 18px; }
+.dash-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.dash-top h3 { margin: 0; font: 400 26px var(--display); }
+.call-btn { border: 0; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font: 700 14px var(--body); padding: 10px 18px; }
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.grid .wide { grid-column: span 2; }
+@media (max-width: 900px) { .grid { grid-template-columns: 1fr; } .grid .wide { grid-column: auto; } }
+.tile { border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: grid; gap: 10px; align-content: start; }
+.tile h4 { margin: 0; font: 500 11px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.tile .v { font: 400 28px/1 var(--display); font-variant-numeric: tabular-nums; }
+.tile p { margin: 0; font-size: 14px; line-height: 1.45; color: var(--muted); }
+.tile svg text { fill: var(--muted); font: 10px var(--mono); }
+.g-line { stroke: var(--line); }
+.s-line { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.s-area { fill: var(--accent); opacity: .1; }
+.s-dot { fill: var(--accent); }
+.nights { display: grid; gap: 6px; }
+.night { display: grid; grid-template-columns: 30px 1fr; gap: 8px; align-items: center; font: 10.5px var(--mono); color: var(--muted); }
+.track { position: relative; height: 10px; border-radius: 5px; background: var(--bg); }
+.track span { position: absolute; top: 0; bottom: 0; border-radius: 5px; background: var(--accent); opacity: .75; }
+.track b { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--human); left: 17%; }
+.axis { display: grid; grid-template-columns: 30px 1fr; gap: 8px; font: 9.5px var(--mono); color: var(--muted); }
+.axis div { display: flex; justify-content: space-between; }
+.calls { display: grid; gap: 0; }
+.call-row { display: grid; grid-template-columns: 74px 1fr auto; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 14px; align-items: baseline; }
+.call-row time { font: 11px var(--mono); color: var(--muted); }
+.call-row span:last-child { font: 11px var(--mono); color: var(--muted); }
+.coach-note { background: var(--human-soft); border-radius: 12px; padding: 12px; display: grid; gap: 4px; font-size: 14px; line-height: 1.45; }
+.coach-note b { font: 500 11px var(--mono); color: var(--human); }
+.weekdots { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center; font: 10px var(--mono); color: var(--muted); }
+.weekdots i { display: block; height: 26px; border-radius: 8px; background: var(--bg); border: 1px solid var(--line); margin-bottom: 4px; }
+.weekdots i.yes { background: var(--accent); border-color: var(--accent); }
+.foot { font: 12px var(--mono); color: var(--muted); }
+.notes { display: grid; gap: 8px; margin: 0; padding-left: 18px; line-height: 1.5; max-width: 80ch; }
+</style>
+
+<main>
+  <header>
+    <span class="eyebrow">Main interface: a call</span>
+    <h1>Check-in by voice, details on /dashboard</h1>
+    <p class="lede">Each check-in is a short voice call with the AI, about two to three minutes. While it talks, simple cards slide up under the captions: last week's sleep, today's plan as it changes, a stress scale you can tap or answer out loud. Everything else lives on /dashboard.</p>
+  </header>
+
+  <section aria-labelledby="call-h">
+    <h2 id="call-h">The morning call, in five moments</h2>
+    <div class="row-phones">
+
+      <figure>
+        <div class="phone"><div class="screen call">
+          <div class="push"><b>07:30 · CHECK-IN</b>Your morning check-in is ready. Tap to talk.</div>
+          <div class="start">
+            <div class="orb" aria-hidden="true"></div>
+            <h3>Morning check-in</h3>
+            <p>About 2 minutes. You can stop any time.</p>
+            <button class="big-call" id="s-start">Start call</button>
+            <button class="text-link" id="s-text">Reply by text instead</button>
+          </div>
+        </div></div>
+        <figcaption><b>1 · Start</b>A push notification opens the start screen. The call starts only when you tap.</figcaption>
+      </figure>
+
+      <figure>
+        <div class="phone"><div class="screen call">
+          <div class="status"><span>07:31</span><span>00:18</span></div>
+          <div class="compact"><div class="orb small" aria-hidden="true"></div><div><b>Check-in</b><span>speaking</span></div>
+            <div class="bars" aria-hidden="true"><i style="height:8px"></i><i style="height:16px"></i><i style="height:22px"></i><i style="height:12px"></i><i style="height:18px"></i><i style="height:9px"></i></div></div>
+          <div class="caption"><span class="speaker">Check-in</span><p>You slept about an hour less than usual, and later than most nights this week.</p></div>
+          <div class="ctx">
+            <div class="ctx-head"><b>Sleep, last 7 nights</b><span>hours</span></div>
+            <svg viewBox="0 0 240 112" role="img" aria-label="Sleep hours: 7.0, 6.6, 7.6, 7.4, 7.0, 7.4, and 6.1 last night; usual 7.2">
+              <line x1="18" y1="100" x2="236" y2="100" stroke="#34402f"/>
+              <line x1="18" y1="28" x2="236" y2="28" stroke="#9cc79a" stroke-dasharray="3 3"/>
+              <text x="0" y="31">7.2</text><text x="6" y="103">0</text>
+              <rect x="24" y="30" width="22" height="70" rx="4" fill="#3c4a3c"/>
+              <rect x="54" y="34" width="22" height="66" rx="4" fill="#3c4a3c"/>
+              <rect x="84" y="24" width="22" height="76" rx="4" fill="#3c4a3c"/>
+              <rect x="114" y="26" width="22" height="74" rx="4" fill="#3c4a3c"/>
+              <rect x="144" y="30" width="22" height="70" rx="4" fill="#3c4a3c"/>
+              <rect x="174" y="26" width="22" height="74" rx="4" fill="#3c4a3c"/>
+              <rect x="204" y="39" width="22" height="61" rx="4" fill="#9cc79a"/>
+              <text x="200" y="35">6.1</text>
+            </svg>
+            <div class="dots" aria-hidden="true"><i class="on"></i><i></i><i></i></div>
+          </div>
+          <div class="spacer"></div>
+          <div class="controls">
+            <button class="ctl" id="c1-mute" aria-label="Mute">mute</button>
+            <button class="ctl on" id="c1-cards" aria-label="Hide cards">cards</button>
+            <button class="ctl" id="c1-text" aria-label="Type instead">type</button>
+            <button class="ctl end" id="c1-end" aria-label="End call">end</button>
+          </div>
+        </div></div>
+        <figcaption><b>2 · AI speaking</b>Live captions. A chart card appears for what it is talking about.</figcaption>
+      </figure>
+
+      <figure>
+        <div class="phone"><div class="screen call">
+          <div class="status"><span>07:32</span><span>01:04</span></div>
+          <div class="compact"><div class="orb small" aria-hidden="true"></div><div><b>Check-in</b><span>listening</span></div></div>
+          <div class="caption you"><span class="speaker">You</span><p>I've got a call with a recruiter at eleven.</p></div>
+          <div class="caption"><span class="speaker">Check-in</span><p>Then let's move the walk to half ten, before the call.</p></div>
+          <div class="ctx">
+            <div class="ctx-head"><b>Today</b><span>updated</span></div>
+            <div class="plan">
+              <div><time>10:30</time><span>10-min walk outside <span class="new">moved</span></span></div>
+              <div><time><s>11:00</s></time><span><s>walk</s></span></div>
+              <div><time>15:00</time><span>3 min slow breathing</span></div>
+            </div>
+            <div class="dots" aria-hidden="true"><i></i><i class="on"></i><i></i></div>
+          </div>
+          <div class="spacer"></div>
+          <div class="controls">
+            <button class="ctl" id="c2-mute" aria-label="Mute">mute</button>
+            <button class="ctl on" id="c2-cards" aria-label="Hide cards">cards</button>
+            <button class="ctl" id="c2-text" aria-label="Type instead">type</button>
+            <button class="ctl end" id="c2-end" aria-label="End call">end</button>
+          </div>
+        </div></div>
+        <figcaption><b>3 · You speaking</b>The plan card changes as you agree on it.</figcaption>
+      </figure>
+
+      <figure>
+        <div class="phone"><div class="screen call">
+          <div class="status"><span>07:33</span><span>01:52</span></div>
+          <div class="compact"><div class="orb small" aria-hidden="true"></div><div><b>Check-in</b><span>speaking</span></div></div>
+          <div class="caption"><span class="speaker">Check-in</span><p>Last thing. How stressed do you feel right now, one to five?</p></div>
+          <div class="ctx">
+            <div class="ctx-head"><b>Stress right now</b><span>say it or tap</span></div>
+            <div class="scale" role="group" aria-label="Stress 1 calm to 5 very stressed">
+              <button id="c3-s1">1</button><button id="c3-s2">2</button><button class="on" id="c3-s3">3</button><button id="c3-s4">4</button><button id="c3-s5">5</button>
+            </div>
+            <div class="scale-l"><span>calm</span><span>very stressed</span></div>
+            <div class="dots" aria-hidden="true"><i></i><i></i><i class="on"></i></div>
+          </div>
+          <div class="spacer"></div>
+          <div class="controls">
+            <button class="ctl" id="c3-mute" aria-label="Mute">mute</button>
+            <button class="ctl on" id="c3-cards" aria-label="Hide cards">cards</button>
+            <button class="ctl" id="c3-text" aria-label="Type instead">type</button>
+            <button class="ctl end" id="c3-end" aria-label="End call">end</button>
+          </div>
+        </div></div>
+        <figcaption><b>4 · Stress rating</b>The main metric. Answer out loud or tap the scale.</figcaption>
+      </figure>
+
+      <figure>
+        <div class="phone"><div class="screen light">
+          <div class="status" style="color:var(--muted)"><span>07:33</span><span>ended · 2:04</span></div>
+          <div class="sum">
+            <h3>Today's plan</h3>
+            <div class="card">
+              <span class="k">Agreed</span>
+              <div class="plan">
+                <div><time>10:30</time><span>10-min walk outside</span></div>
+                <div><time>15:00</time><span>3 min slow breathing</span></div>
+              </div>
+            </div>
+            <div class="card"><span class="k">Stress</span><span>3 of 5 · this morning</span></div>
+            <p class="coachline">Nudges at 10:30 and 15:00. Your coach sees this week's calls on Monday.</p>
+            <a href="#dash-h">Open dashboard</a>
+          </div>
+        </div></div>
+        <figcaption><b>5 · After the call</b>A one-screen summary. Nudges later in the day work the same way, as 30-second calls or a tap.</figcaption>
+      </figure>
+
+    </div>
+  </section>
+
+  <section aria-labelledby="dash-h">
+    <h2 id="dash-h">/dashboard</h2>
+    <div class="dash">
+      <div class="urlbar"><i></i><i></i><i></i><span>yourapp/dashboard</span></div>
+      <div class="dash-body">
+        <div class="dash-top"><h3>Week of 5 Oct</h3><button class="call-btn" id="d-call">Start a check-in call</button></div>
+        <div class="grid">
+          <div class="tile wide">
+            <h4>Stress, daily average</h4>
+            <svg viewBox="0 0 520 150" role="img" aria-label="Daily stress Monday to Sunday: 4, 4, 3, 3, 2, 3, 2">
+              <line class="g-line" x1="28" y1="20" x2="512" y2="20"/><line class="g-line" x1="28" y1="70" x2="512" y2="70"/><line class="g-line" x1="28" y1="120" x2="512" y2="120"/>
+              <text x="8" y="24">5</text><text x="8" y="74">3</text><text x="8" y="124">1</text>
+              <path class="s-area" d="M40 45 L117 45 L194 70 L271 70 L348 95 L425 70 L502 95 L502 120 L40 120 Z"/>
+              <polyline class="s-line" points="40,45 117,45 194,70 271,70 348,95 425,70 502,95"/>
+              <circle class="s-dot" cx="502" cy="95" r="5"/>
+              <text x="34" y="142">Mon</text><text x="111" y="142">Tue</text><text x="187" y="142">Wed</text><text x="264" y="142">Thu</text><text x="343" y="142">Fri</text><text x="419" y="142">Sat</text><text x="494" y="142">Sun</text>
+            </svg>
+            <p>Down from 4 to 2 across the week.</p>
+          </div>
+          <div class="tile">
+            <h4>Today</h4>
+            <div class="plan" style="--voice:var(--accent)">
+              <div><time style="color:var(--accent)">10:30</time><span>10-min walk outside</span></div>
+              <div><time style="color:var(--accent)">15:00</time><span>3 min slow breathing</span></div>
+            </div>
+            <p>Agreed on the 07:31 call.</p>
+          </div>
+          <div class="tile">
+            <h4>Days outside</h4>
+            <span class="v">5 / 7</span>
+            <div class="weekdots" aria-label="Outside on Mon, Wed, Thu, Sat, Sun">
+              <span><i class="yes"></i>M</span><span><i></i>T</span><span><i class="yes"></i>W</span><span><i class="yes"></i>T</span><span><i></i>F</span><span><i class="yes"></i>S</span><span><i class="yes"></i>S</span>
+            </div>
+          </div>
+          <div class="tile">
+            <h4>Sleep timing</h4>
+            <div class="nights" aria-label="Sleep window each night between 22:00 and 08:00; orange mark is your usual bedtime 23:40">
+              <div class="night">Mon<div class="track"><span style="left:15%;width:72.5%"></span><b></b></div></div>
+              <div class="night">Tue<div class="track"><span style="left:21.7%;width:68.3%"></span><b></b></div></div>
+              <div class="night">Wed<div class="track"><span style="left:18.3%;width:70%"></span><b></b></div></div>
+              <div class="night">Thu<div class="track"><span style="left:21.7%;width:66.6%"></span><b></b></div></div>
+              <div class="night">Fri<div class="track"><span style="left:10.8%;width:79.2%"></span><b></b></div></div>
+              <div class="night">Sat<div class="track"><span style="left:12.5%;width:80.8%"></span><b></b></div></div>
+              <div class="night">Sun<div class="track"><span style="left:26.7%;width:61.6%"></span><b></b></div></div>
+            </div>
+            <div class="axis"><span></span><div><span>22:00</span><span>03:00</span><span>08:00</span></div></div>
+          </div>
+          <div class="tile">
+            <h4>From your coach</h4>
+            <div class="coach-note"><b>Mon 5 Oct · voice note, 2:04</b>Good week. This week, one thing: lights out before midnight.</div>
+          </div>
+          <div class="tile wide">
+            <h4>Recent calls</h4>
+            <div class="calls">
+              <div class="call-row"><time>Tue 07:31</time><span>Walk moved to 10:30 for a recruiter call. Stress 3.</span><span>2:04</span></div>
+              <div class="call-row"><time>Mon 15:00</time><span>Breathing done. Stress 2.</span><span>0:28</span></div>
+              <div class="call-row"><time>Mon 07:30</time><span>School run on foot counts as the walk.</span><span>1:47</span></div>
+            </div>
+          </div>
+          <div class="tile">
+            <h4>Data</h4>
+            <p>Polar Loop connected. Last sync 07:12. <a href="#dash-h" style="color:var(--accent)">Raw numbers</a></p>
+            <p style="font:11px var(--mono)">Data from Polar.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="notes-h">
+    <h2 id="notes-h">Things to confirm before building</h2>
+    <ul class="notes">
+      <li>iPhone web apps cannot ring like a real phone call. The 07:30 check-in arrives as a notification, and the call starts when you tap it. A ringing call needs a native app.</li>
+      <li>Voice needs a speech-to-speech service. Whether OpenRouter offers one is not verified. If not, the voice layer comes from a separate provider, and OpenRouter keeps the planning and text.</li>
+      <li>Microphone access in a home-screen web app on iOS is not verified. It is the first thing to test.</li>
+    </ul>
+  </section>
+
+  <p class="foot">All figures are examples, not your Polar data.</p>
+</main>
