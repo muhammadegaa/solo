@@ -1,4 +1,4 @@
-# Daily check-in for a dad at home — Product Spec
+# Solo — Product Spec
 
 *Generated from the phase 1 interview, 2026-10-06.*
 

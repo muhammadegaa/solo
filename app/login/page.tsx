@@ -3,7 +3,7 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
   return (
     <main className="fl fl-start">
       <div className="fl-orb" aria-hidden="true" />
-      <h1>Check-in</h1>
+      <h1>Solo</h1>
       <form action="/api/login" method="post" className="fl-login">
         <label htmlFor="passcode">Passcode</label>
         <input id="passcode" name="passcode" type="password" autoComplete="current-password" required />
