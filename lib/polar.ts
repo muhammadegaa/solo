@@ -148,3 +148,13 @@ export function toRows(raw: Awaited<ReturnType<typeof fetchRaw>>, days: number):
   }
   return rows;
 }
+
+// Per-minute steps for one day, in the device's local time. syncedTo is the last minute Polar has.
+export type DaySteps = { total: number; samples: { min: number; steps: number }[]; syncedTo: number | null };
+
+export async function fetchDaySteps(token: string, date: string): Promise<DaySteps | null> {
+  const day = await get<{ steps?: number; samples?: { steps?: { samples?: { steps: number; timestamp: string }[] } } }>(token, `/users/activities/${date}?steps=true`);
+  if (!day) return null;
+  const samples = (day.samples?.steps?.samples ?? []).map((s) => ({ min: Number(s.timestamp.slice(11, 13)) * 60 + Number(s.timestamp.slice(14, 16)), steps: s.steps }));
+  return { total: day.steps ?? 0, samples, syncedTo: samples.length ? samples[samples.length - 1].min : null };
+}

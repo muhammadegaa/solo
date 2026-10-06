@@ -2,11 +2,20 @@ import SignOut from "@/app/SignOut";
 import { requireUser } from "@/lib/auth";
 import { recentCalls } from "@/lib/calls";
 import { config } from "@/lib/config";
+import { checkPlans } from "@/lib/followup";
+import type { Check } from "@/lib/plancheck";
 import { fetchRaw, toRows, type DayRow } from "@/lib/polar";
 import { getPolarLink } from "@/lib/store";
 import { WINDOW_MIN, clock, dailyAverage, lastDates, median, nightMinutes, sleepBar, trendTitle, weekdayLetter, weekdayShort } from "@/lib/week";
 
 export const dynamic = "force-dynamic";
+
+function Status({ c }: { c: Check }) {
+  if (c.kind === "seen") return <span className="pill ok">Done · {c.steps.toLocaleString("en-GB")} steps</span>;
+  if (c.kind === "not-seen") return <span className="pill wait">Not seen on Loop</span>;
+  if (c.kind === "not-synced") return <span className="pill">Waiting for Loop sync</span>;
+  return null;
+}
 
 const banners: Record<string, string> = {
   connected: "Polar connected.",
@@ -48,6 +57,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const weekCalls = calls.filter((c) => dates.includes(c.localDate));
   const stress = dailyAverage(weekCalls.map((c) => ({ localDate: c.localDate, value: c.stress })), dates);
   const todayCall = calls.find((c) => c.localDate === today && c.plan.length);
+  const todayChecked = todayCall ? (await checkPlans(link?.accessToken ?? null, [todayCall]))[0].items : [];
 
   const byDate = new Map(rows.map((r) => [r.date, r]));
   const week = dates.map((d) => byDate.get(d));
@@ -76,7 +86,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <section className="tile">
           <h2>Today</h2>
           {todayCall ? (
-            <ul className="plan">{todayCall.plan.map((p, i) => <li key={i}><time>{p.time ?? "any time"}</time><span>{p.action}</span></li>)}</ul>
+            <ul className="plan">{todayChecked.map((p, i) => <li key={i}><time>{p.time ?? "any time"}</time><span>{p.action} <Status c={p.check} /></span></li>)}</ul>
           ) : <p>No plan yet today.</p>}
         </section>
 

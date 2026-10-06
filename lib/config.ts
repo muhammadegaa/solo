@@ -22,6 +22,11 @@ export const config = {
   timeZone: process.env.APP_TIME_ZONE ?? "Europe/London", // dates on the dashboard and in call records
   activeDaySteps: Number(process.env.ACTIVE_DAY_STEPS ?? 6000), // a day counts as active at or above this
 
+  planCheckMinSteps: Number(process.env.PLAN_CHECK_MIN_STEPS ?? 600), // steps around a planned walk that count as done
+  planCheckBeforeMin: Number(process.env.PLAN_CHECK_BEFORE_MIN ?? 30),
+  planCheckAfterMin: Number(process.env.PLAN_CHECK_AFTER_MIN ?? 90),
+  recentCallDays: Number(process.env.RECENT_CALL_DAYS ?? 3), // past calls the AI remembers
+
   elevenlabsKey: process.env.ELEVENLABS_API_KEY,
   elevenlabsVoice: () => req("ELEVENLABS_VOICE_ID"),
   elevenlabsModel: process.env.ELEVENLABS_MODEL ?? "eleven_v4_turbo",

@@ -1,4 +1,7 @@
 import { fetchRaw, toRows } from "./polar";
+import { recentCalls } from "./calls";
+import { config } from "./config";
+import { checkPlans, followupLines } from "./followup";
 import { getPolarLink } from "./store";
 
 export type Night = { date: string; sleepH: number | null; bed: string | null };
@@ -13,8 +16,11 @@ const median = (xs: number[]) => {
 
 // Without a Polar token the call runs in no-device mode.
 export async function getCallContext(uid: string): Promise<CallContext> {
-  const link = await getPolarLink(uid);
-  if (!link) return { nights: [], usualH: null, summary: "No wearable data. Ask how they slept." };
+  const [link, calls] = await Promise.all([getPolarLink(uid), recentCalls(uid, config.recentCallDays)]);
+  const memory = calls.length
+    ? ["", "Previous calls, newest first, with what the Loop shows for each agreed action:", ...followupLines(await checkPlans(link?.accessToken ?? null, calls))].join("\n")
+    : "\nNo previous calls. This is the first one.";
+  if (!link) return { nights: [], usualH: null, summary: `No wearable data. Ask how they slept.${memory}` };
   try {
     const rows = toRows(await fetchRaw(link.accessToken, 14), 14);
     const usualH = median(rows.map((r) => r.sleepH).filter((x): x is number => x !== null));
@@ -26,10 +32,10 @@ export async function getCallContext(uid: string): Promise<CallContext> {
       `Last night (${last.date}): ${last.sleepH ?? "no data"} h, bed ${last.bed ?? "?"}, wake ${last.wake ?? "?"}.`,
       "Last 7 days, newest first:",
       ...lines,
-    ].join("\n");
+    ].join("\n") + memory;
     return { nights, usualH, summary };
   } catch (e) {
-    return { nights: [], usualH: null, summary: `Wearable data unavailable (${(e as Error).message}). Ask how they slept.` };
+    return { nights: [], usualH: null, summary: `Wearable data unavailable (${(e as Error).message}). Ask how they slept.${memory}` };
   }
 }
 
@@ -41,7 +47,12 @@ How to talk:
 - No streaks, no guilt.
 
 Shape of the call (about 2 minutes):
-1. Open with one sentence about last night against his usual, then ask how he's feeling.
+1. Open with one sentence about last night against his usual.
+   Then, if the previous calls list any action marked "looks done" or "no sign of it", you must say one short sentence about the most recent one:
+   - looks done: name it and the evidence, e.g. "And your Loop shows you got that morning walk in yesterday, nice."
+   - no sign of it: state it plainly once with no blame, e.g. "I didn't see yesterday's walk on your Loop, so let's make today's easier." Never ask why.
+   - Ignore actions marked "hasn't synced yet" or "can't be checked".
+   Then ask how he's feeling.
 2. Agree one or two small actions for today: a walk outside (10–30 min), slow breathing (1–5 min), a short bodyweight session (10–20 min), or something active with his kids. Smaller after a poor night or if he sounds stressed. Fit them around anything he mentions.
 3. Ask for his stress right now on a scale of 1 to 5.
 4. Repeat the agreed plan in one sentence and say goodbye.
