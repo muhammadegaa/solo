@@ -132,3 +132,6 @@ a.fl-big { text-decoration: none; display: inline-block; }
 .times label { font-size: 13px; font-weight: 700; color: var(--mute); }
 .times input { font: inherit; font-size: 16px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--ink); justify-self: start; }
 .times .db-btn { grid-column: 1 / -1; }
+.fl-start { position: relative; }
+.fl-nav { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 14px); right: 20px; }
+.fl-nav a { color: var(--ink); font-size: 15px; font-weight: 700; text-decoration: none; padding: 8px 14px; border-radius: 999px; background: rgba(255,255,255,.12); }

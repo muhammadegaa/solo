@@ -205,6 +205,7 @@ export default function Call({ nights, usualH, summary }: { nights: Night[]; usu
   if (phase === "idle" || phase === "error") {
     return (
       <main className="fl fl-start">
+        <nav className="fl-nav"><a href="/dashboard" id="to-dashboard">Dashboard</a></nav>
         <div className="fl-orb" aria-hidden="true" />
         <h1>Morning check-in</h1>
         <p>About 2 minutes. You can stop any time.</p>
