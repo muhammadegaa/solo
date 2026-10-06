@@ -27,6 +27,15 @@ export const config = {
   planCheckAfterMin: Number(process.env.PLAN_CHECK_AFTER_MIN ?? 90),
   recentCallDays: Number(process.env.RECENT_CALL_DAYS ?? 3), // past calls the AI remembers
 
+  vapidPublicKey: () => req("NEXT_PUBLIC_VAPID_PUBLIC_KEY"),
+  vapidPrivateKey: () => req("VAPID_PRIVATE_KEY"),
+  vapidSubject: () => req("VAPID_SUBJECT"),
+  cronSecret: () => req("CRON_SECRET"),
+  defaultMorning: process.env.DEFAULT_MORNING_TIME ?? "07:30",
+  defaultNudges: (process.env.DEFAULT_NUDGE_TIMES ?? "11:00,15:00").split(",").map((t) => t.trim()).filter(Boolean),
+  pushLateMin: Number(process.env.PUSH_LATE_MIN ?? 60), // a push may go out up to this many minutes after its time
+  nudgeMovedSteps: Number(process.env.NUDGE_MOVED_STEPS ?? 600), // skip a nudge if the Loop shows this many steps in the last hour
+
   elevenlabsKey: process.env.ELEVENLABS_API_KEY,
   elevenlabsVoice: () => req("ELEVENLABS_VOICE_ID"),
   elevenlabsModel: process.env.ELEVENLABS_MODEL ?? "eleven_v4_turbo",

@@ -5,7 +5,9 @@ import { config } from "@/lib/config";
 import { checkPlans } from "@/lib/followup";
 import type { Check } from "@/lib/plancheck";
 import { fetchRaw, toRows, type DayRow } from "@/lib/polar";
+import { getSettings } from "@/lib/settings";
 import { getPolarLink } from "@/lib/store";
+import Reminders from "./Reminders";
 import { WINDOW_MIN, clock, dailyAverage, lastDates, median, nightMinutes, sleepBar, trendTitle, weekdayLetter, weekdayShort } from "@/lib/week";
 
 export const dynamic = "force-dynamic";
@@ -50,7 +52,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const dates = lastDates(7, config.timeZone);
   const today = dates[dates.length - 1];
 
-  const [calls, link] = await Promise.all([recentCalls(user.uid, 8), getPolarLink(user.uid)]);
+  const [calls, link, settings] = await Promise.all([recentCalls(user.uid, 8), getPolarLink(user.uid), getSettings(user.uid)]);
   const rows: DayRow[] = link ? await fetchRaw(link.accessToken, 14).then((r) => toRows(r, 14)).catch(() => []) : [];
   const polarDown = Boolean(link) && rows.length === 0;
 
@@ -137,6 +139,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
             </ul>
           ) : <p>No calls yet.</p>}
         </section>
+
+        <Reminders initial={settings} />
 
         <section className="tile">
           <h2>Polar</h2>

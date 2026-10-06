@@ -127,3 +127,8 @@ a.fl-big { text-decoration: none; display: inline-block; }
 .pill { display: inline-block; margin-left: 6px; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: var(--bg); color: var(--mute); vertical-align: 1px; white-space: nowrap; }
 .pill.ok { background: #e3f1e6; color: #2f6b3d; }
 .pill.wait { background: #f6ecdf; color: #8a5a22; }
+.db-btn { justify-self: start; border: 0; border-radius: 999px; background: var(--ink); color: #f6efe6; font-weight: 700; font-size: 14px; padding: 9px 16px; }
+.times { display: grid; grid-template-columns: auto 1fr; gap: 8px 12px; align-items: center; }
+.times label { font-size: 13px; font-weight: 700; color: var(--mute); }
+.times input { font: inherit; font-size: 16px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--ink); justify-self: start; }
+.times .db-btn { grid-column: 1 / -1; }

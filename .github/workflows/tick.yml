@@ -1,0 +1,12 @@
+# Runs Solo's push scheduler every 15 minutes. GitHub may start scheduled runs a few minutes late;
+# each push is allowed to go out up to PUSH_LATE_MIN minutes after its time.
+name: push tick
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -fsS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" https://usesolo.vercel.app/api/cron/tick
