@@ -19,6 +19,7 @@ export type Day = {
   stress: number | null;
   factors: string[];
   said: string[]; // the user's own sentences from that day's calls
+  calls: { time: string; summary: string }[];
 };
 
 // Per-minute features for past days never change once synced, so they are cached in Firestore.
@@ -67,6 +68,7 @@ export async function getDays(uid: string, token: string | null): Promise<Day[]>
       stress: ratings.length ? Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10 : null,
       factors: [...new Set(dc.flatMap((c) => c.factors ?? []))],
       said: dc.flatMap((c) => c.messages.filter((m) => m.role === "user").map((m) => m.content)),
+      calls: dc.map((c) => ({ time: c.startedAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: config.timeZone }), summary: c.summary })).reverse(),
     };
   });
 }
