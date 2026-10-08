@@ -14,8 +14,8 @@ export type Check =
 const toMin = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5));
 
 export function checkItem(item: PlanItem, day: DaySteps | null, opts: { minSteps: number; before: number; after: number }): Check {
-  if (!isMovement(item.action) || !day) return { kind: "unchecked" };
-  if (!item.time || !/^\d{2}:\d{2}$/.test(item.time)) return { kind: "unchecked" };
+  if (!isMovement(item.action) || !item.time || !/^\d{2}:\d{2}$/.test(item.time)) return { kind: "unchecked" };
+  if (!day) return { kind: "not-synced" }; // Polar has no step data for that day yet
   const t = toMin(item.time);
   const from = t - opts.before;
   const to = t + opts.after;

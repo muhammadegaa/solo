@@ -5,12 +5,36 @@ import { config } from "@/lib/config";
 import { checkPlans } from "@/lib/followup";
 import type { Check } from "@/lib/plancheck";
 import { fetchRaw, toRows, type DayRow } from "@/lib/polar";
+import { getDays } from "@/lib/days";
+import { findings, type Finding } from "@/lib/findings";
 import { getSettings } from "@/lib/settings";
 import { getPolarLink } from "@/lib/store";
 import Reminders from "./Reminders";
 import { WINDOW_MIN, clock, dailyAverage, lastDates, median, nightMinutes, sleepBar, trendTitle, weekdayLetter, weekdayShort } from "@/lib/week";
 
 export const dynamic = "force-dynamic";
+
+function FindingCard({ f }: { f: Finding }) {
+  const max = f.compare ? Math.max(f.compare.a.value, f.compare.b.value) || 1 : 1;
+  return (
+    <article className="finding">
+      <header><h3>{f.title}</h3><span className={`chip ${f.strength}`}>{f.strength === "pattern" ? "Pattern" : "Early hint"}</span></header>
+      <p>{f.detail}</p>
+      {f.compare && (
+        <div className="bars" aria-label={`${f.compare.a.label} ${f.compare.a.value} ${f.compare.unit}, ${f.compare.b.label} ${f.compare.b.value}`}>
+          {[f.compare.a, f.compare.b].map((c, i) => (
+            <div className="bar" key={i}>
+              <span className="bar-l">{c.label}</span>
+              <span className="bar-t"><i style={{ width: `${(c.value / max) * 100}%` }} className={i === 0 ? "a" : "b"} /></span>
+              <span className="bar-v">{c.value} <small>{f.compare!.unit}</small></span>
+            </div>
+          ))}
+        </div>
+      )}
+      {f.suggestion && <p className="try">Try: {f.suggestion}</p>}
+    </article>
+  );
+}
 
 function Status({ c }: { c: Check }) {
   if (c.kind === "seen") return <span className="pill ok">Done · {c.steps.toLocaleString("en-GB")} steps</span>;
@@ -53,6 +77,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const today = dates[dates.length - 1];
 
   const [calls, link, settings] = await Promise.all([recentCalls(user.uid, 8), getPolarLink(user.uid), getSettings(user.uid)]);
+  const insights = findings(await getDays(user.uid, link?.accessToken ?? null)).filter((f) => f.kind === "finding").slice(0, 3);
   const rows: DayRow[] = link ? await fetchRaw(link.accessToken, 14).then((r) => toRows(r, 14)).catch(() => []) : [];
   const polarDown = Boolean(link) && rows.length === 0;
 
@@ -78,6 +103,12 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <span className="db-user">{user.email} · <SignOut /></span>
       </header>
       {polar && banners[polar] && <p className="db-banner">{banners[polar]}</p>}
+
+      <section className="only">
+        <h2>Only in Solo <span>What your wearable app alone doesn&apos;t show</span></h2>
+        {insights.length ? <div className="findings">{insights.map((f) => <FindingCard key={f.id} f={f} />)}</div>
+          : <p>Findings appear after a few days of calls and Loop data. Each call adds to them.</p>}
+      </section>
 
       <div className="db-grid">
         <section className="tile wide">

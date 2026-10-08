@@ -36,6 +36,11 @@ export const config = {
   pushLateMin: Number(process.env.PUSH_LATE_MIN ?? 60), // a push may go out up to this many minutes after its time
   nudgeMovedSteps: Number(process.env.NUDGE_MOVED_STEPS ?? 600), // skip a nudge if the Loop shows this many steps in the last hour
 
+  findingDays: Number(process.env.FINDING_DAYS ?? 28), // how far back findings look
+  shapeDays: Number(process.env.SHAPE_DAYS ?? 14), // days of per-minute step data used for day-shape findings
+  firstMoveSteps: Number(process.env.FIRST_MOVE_STEPS ?? 300), // steps in 10 minutes that count as a real walk
+  findingRepeatDays: Number(process.env.FINDING_REPEAT_DAYS ?? 5), // a finding isn't used again in a call within this many days
+
   elevenlabsKey: process.env.ELEVENLABS_API_KEY,
   elevenlabsVoice: () => req("ELEVENLABS_VOICE_ID"),
   elevenlabsModel: process.env.ELEVENLABS_MODEL ?? "eleven_v4_turbo",

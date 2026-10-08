@@ -18,7 +18,7 @@ export async function checkPlans(token: string | null, calls: CallRecord[]): Pro
   return Promise.all(
     calls.map(async (call) => {
       const steps = await day(call.localDate);
-      return { call, items: call.plan.map((p) => ({ ...p, check: checkItem(p, steps, opts) })) };
+      return { call, items: call.plan.map((p) => ({ ...p, check: token ? checkItem(p, steps, opts) : ({ kind: "unchecked" } as Check) })) };
     }),
   );
 }

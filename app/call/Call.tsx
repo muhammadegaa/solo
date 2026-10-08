@@ -78,7 +78,10 @@ function SleepCard({ nights, usualH }: { nights: Night[]; usualH: number | null 
   );
 }
 
-export default function Call({ nights, usualH, summary }: { nights: Night[]; usualH: number | null; summary: string }) {
+export default function Call({ nights, usualH, summary, findingIds, findingTitle }: { nights: Night[]; usualH: number | null; summary: string; findingIds: string[]; findingTitle: string | null }) {
+  const [stress, setStress] = useState<number | null>(null);
+  const stressRef = useRef<number | null>(null);
+  const tapStress = (n: number) => { stressRef.current = n; setStress(n); };
   const [phase, setPhase] = useState<Phase>("idle");
   const [caption, setCaption] = useState<{ you: string | null; ai: string } | null>(null);
   const [level, setLevel] = useState(0);
@@ -167,6 +170,8 @@ export default function Call({ nights, usualH, summary }: { nights: Night[]; usu
       history.current = [];
       turnsLog.current = [];
       startedAt.current = Date.now();
+      stressRef.current = null;
+      setStress(null);
       setResult(null);
       setTurns([]);
       setSeconds(0);
@@ -191,7 +196,7 @@ export default function Call({ nights, usualH, summary }: { nights: Night[]; usu
     fetch("/api/call/end", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ startedAt: startedAt.current, durationS: Math.round((Date.now() - startedAt.current) / 1000), messages: history.current, turnsMs: turnsLog.current }),
+      body: JSON.stringify({ startedAt: startedAt.current, durationS: Math.round((Date.now() - startedAt.current) / 1000), messages: history.current, turnsMs: turnsLog.current, stressTap: stressRef.current, findingIds }),
     })
       .then((r) => r.json())
       .then((b) => setResult(b.error ? { plan: [], stress: null, error: b.error } : b))
@@ -209,6 +214,7 @@ export default function Call({ nights, usualH, summary }: { nights: Night[]; usu
         <div className="fl-orb" aria-hidden="true" />
         <h1>Morning check-in</h1>
         <p>About 2 minutes. You can stop any time.</p>
+        {findingTitle && <p className="fl-teaser"><span>Today</span>{findingTitle}</p>}
         {error && <p className="fl-error">Something went wrong: {error}</p>}
         <button className="fl-big" id="start-call" onClick={start}>{error ? "Try again" : "Start call"}</button>
       </main>
@@ -255,6 +261,13 @@ export default function Call({ nights, usualH, summary }: { nights: Night[]; usu
       {caption?.you && <div className="fl-cap you"><span className="fl-who">You</span><p>{caption.you}</p></div>}
       {caption && <div className="fl-cap"><span className="fl-who">Check-in</span><p>{caption.ai}</p></div>}
       {cards && nights.length > 0 && <SleepCard nights={nights} usualH={usualH} />}
+      <div className="fl-card fl-stress">
+        <div className="fl-card-h"><b>Stress right now</b><span>{stress ? "saved with this call" : "tap any time"}</span></div>
+        <div className="fl-scale" role="group" aria-label="Stress, 1 calm to 5 very stressed">
+          {[1, 2, 3, 4, 5].map((n) => <button key={n} id={`stress-${n}`} className={stress === n ? "on" : ""} aria-pressed={stress === n} onClick={() => tapStress(n)}>{n}</button>)}
+        </div>
+        <div className="fl-scale-l"><span>calm</span><span>very stressed</span></div>
+      </div>
       {phase === "paused" && <button className="fl-big fl-resume" id="resume" onClick={listen}>Tap to talk</button>}
       {last && <p className="fl-ms">last turn: stt {last.stt} · llm {last.llm} · tts {last.tts} ms</p>}
       <div className="fl-ctrls">
