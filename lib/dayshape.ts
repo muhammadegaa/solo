@@ -7,6 +7,7 @@ export type DayShape = {
   longestStillMin: number; // longest run of minutes with < 5 steps, 08:00-21:00
   longestStillStart: number | null;
   syncedTo: number | null;
+  hourly: number[]; // steps in each hour, 00 to 23
 };
 
 export function dayShape(samples: { min: number; steps: number }[]): DayShape {
@@ -30,7 +31,8 @@ export function dayShape(samples: { min: number; steps: number }[]): DayShape {
       if (cur > best) { best = cur; bestStart = curStart; }
     } else cur = 0;
   }
-  return { amSteps, firstMoveMin, longestStillMin: best, longestStillStart: bestStart, syncedTo };
+  const hourly = Array.from({ length: 24 }, (_, h) => samples.filter((s) => Math.floor(s.min / 60) === h).reduce((a, s) => a + s.steps, 0));
+  return { amSteps, firstMoveMin, longestStillMin: best, longestStillStart: bestStart, syncedTo, hourly };
 }
 
 export const hhmm = (min: number) => `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;

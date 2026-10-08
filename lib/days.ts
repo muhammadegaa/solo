@@ -31,7 +31,7 @@ async function shapes(uid: string, token: string, dates: string[], today: string
   await Promise.all(
     dates.map(async (date) => {
       const c = cached.get(date);
-      if (c?.complete) return out.set(date, c);
+      if (c?.complete && Array.isArray(c.hourly)) return out.set(date, c); // older cache entries lack hourly steps
       const steps = await fetchDaySteps(token, date).catch(() => null);
       if (!steps) return;
       const s = dayShape(steps.samples);

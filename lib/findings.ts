@@ -9,8 +9,10 @@ export type Finding = {
   id: string;
   kind: "finding" | "question";
   strength: "hint" | "pattern"; // hint: under 4 days per side
-  title: string;
-  detail: string; // shown on the dashboard and spoken in calls
+  title: string; // short label, e.g. on the call screen
+  headline: [string, string, string]; // the answer as a sentence: before, emphasised part, after
+  chart?: "bedtime" | "hours" | "still" | "compare";
+  detail: string; // spoken in calls and used as the footnote basis
   compare?: { unit: string; a: Compare; b: Compare };
   suggestion?: string;
   score: number;
@@ -31,6 +33,8 @@ function bedtime(days: Day[]): Finding | null {
   return {
     id: "bedtime", kind: "finding", strength: strength(early.length, late.length),
     title: "Bed by 23:00 or after midnight",
+    headline: ["You sleep ", `${(e - l).toFixed(1)} hours more`, " when you're in bed by 23:00."],
+    chart: "bedtime",
     detail: `In bed by 23:00 you slept ${e} h on average (${early.length} nights). After midnight, ${l} h (${late.length} nights).`,
     compare: { unit: "h sleep", a: { label: "By 23:00", value: e, n: early.length }, b: { label: "After 00:00", value: l, n: late.length } },
     suggestion: "In bed by 23:00 tonight",
@@ -50,6 +54,8 @@ function mornings(days: Day[]): Finding | null {
   return {
     id: "mornings", kind: "finding", strength: synced.length >= 10 ? "pattern" : "hint",
     title: "Still mornings",
+    headline: ["Most of your walking happens ", "after lunch", "."],
+    chart: "hours",
     detail: `On ${late.length} of the last ${synced.length} days your first walk of 10 minutes or more came after noon.` +
       (withStress ? ` Your stress averaged ${avg(s(late))} on those days and ${avg(s(early))} on days you moved before noon.` : ""),
     compare: withStress ? { unit: "stress (1-5)", a: { label: "Moved before noon", value: avg(s(early)), n: s(early).length }, b: { label: "After noon", value: avg(s(late)), n: s(late).length } } : undefined,
@@ -70,6 +76,7 @@ function recovery(days: Day[]): Finding | null {
   return {
     id: `recovery-${hit.date}`, kind: "finding", strength: "hint",
     title: "Short sleep, good recovery",
+    headline: [`${fmtDate(hit.date)}: `, `${hit.sleepH} h of sleep`, ", but your body still recovered well."],
     detail: `On ${fmtDate(hit.date)} you slept ${hit.sleepH} h, under your usual ${usualSleep} h, but your body recovered well overnight: HRV ${hit.hrv ?? "?"} ms against your usual ${usualHrv}${hit.ans !== null ? `, ANS charge ${hit.ans > 0 ? "+" : ""}${hit.ans}` : ""}.` +
       (ctx.length ? ` Around then you mentioned: ${ctx.join(", ")}.` : ""),
     score: recent.indexOf(hit) <= 1 ? 1.2 : 0.7,
@@ -86,6 +93,8 @@ function stillStretch(days: Day[]): Finding | null {
   return {
     id: "still", kind: "finding", strength: long.length >= 4 ? "pattern" : "hint",
     title: "Your longest still stretch",
+    headline: ["Your longest sit starts around ", at, "."],
+    chart: "still",
     detail: `On ${long.length} of the last ${synced.length} days you sat still for over an hour at a time, usually starting around ${at} and lasting about ${Math.round(dur / 6) / 10} h.`,
     suggestion: `Get up and walk for 5 minutes at ${at}`,
     score: 0.5 + long.length / 14,
@@ -107,6 +116,8 @@ function factorFindings(days: Day[]): Finding[] {
       out.push({
         id: `factor-${f}`, kind: "finding", strength: strength(a.length, b.length),
         title: `Days with “${f}”`,
+        headline: [`After days with “${f}”, you sleep `, `${Math.abs(avg(a) - avg(b)).toFixed(1)} h ${avg(a) > avg(b) ? "more" : "less"}`, "."],
+        chart: "compare",
         detail: `After days you mentioned “${f}”, you slept ${avg(a)} h (${a.length} nights); after other days, ${avg(b)} h (${b.length}).`,
         compare: { unit: "h sleep after", a: { label: f, value: avg(a), n: a.length }, b: { label: "Other days", value: avg(b), n: b.length } },
         score: Math.abs(avg(a) - avg(b)),
@@ -115,6 +126,7 @@ function factorFindings(days: Day[]): Finding[] {
       out.push({
         id: `ask-${f}`, kind: "question", strength: "hint",
         title: `Tracking “${f}”`,
+        headline: ["Tracking ", `“${f}”`, ""],
         detail: `He has mentioned “${f}” on ${withF.length} day(s). Ask once, naturally, whether it applied yesterday or today, so its effect on his sleep and stress can be compared.`,
         score: 0.3,
       });
